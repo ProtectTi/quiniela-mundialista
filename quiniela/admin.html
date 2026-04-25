@@ -61,12 +61,14 @@
       <div class="sec-s">Edita equipos y registra resultados</div>
       <div class="alerta" id="al-pt"></div>
       <div class="card" style="padding:14px 18px;margin-bottom:12px;background:linear-gradient(135deg,#0d1a0d,#0a1a0a);border-color:var(--vd);">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-          <div>
-            <div style="font-family:var(--ft);font-size:18px;color:var(--vd);">⚽ Mundial 2026 — Fase de grupos</div>
-            <div style="font-size:12px;color:#5dcaa5;margin-top:2px;">Carga los 36 partidos confirmados de la fase de grupos con un clic</div>
-          </div>
-          <button class="btn-vd" onclick="window.cargarMundial()" style="white-space:nowrap;">🏆 Cargar partidos del Mundial</button>
+        <div style="margin-bottom:10px;">
+          <div style="font-family:var(--ft);font-size:18px;color:var(--vd);">⚽ Mundial 2026 — Cargar por jornada</div>
+          <div style="font-size:12px;color:#5dcaa5;margin-top:2px;">Selecciona la jornada que quieres cargar (24 partidos cada una)</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-vd" onclick="window.cargarRonda(1)">🟢 Jornada 1</button>
+          <button class="btn-vd" onclick="window.cargarRonda(2)">🟡 Jornada 2</button>
+          <button class="btn-vd" onclick="window.cargarRonda(3)">🔴 Jornada 3</button>
         </div>
       </div>
       <div class="card partidos-card">

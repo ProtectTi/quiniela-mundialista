@@ -41,106 +41,104 @@ function cfgDesdeFirestore(d){
 }
 
 
-// ── PARTIDOS MUNDIAL 2026 - FASE DE GRUPOS COMPLETA ──
-// Grupos confirmados: A-L (12 grupos × 6 partidos = 72 partidos)
-const PARTIDOS_MUNDIAL_2026 = [
-  // ── GRUPO A: México, Corea del Sur, Sudáfrica, Rep. Checa ──
-  ["México","Sudáfrica"],
-  ["Corea del Sur","Rep. Checa"],
-  ["México","Corea del Sur"],
-  ["Rep. Checa","Sudáfrica"],
-  ["Sudáfrica","Corea del Sur"],
-  ["Rep. Checa","México"],
-  // ── GRUPO B: Canadá, Suiza, Qatar, Bosnia y Herzegovina ──
-  ["Canadá","Bosnia y Herzegovina"],
-  ["Qatar","Suiza"],
-  ["Canadá","Qatar"],
-  ["Suiza","Bosnia y Herzegovina"],
-  ["Bosnia y Herzegovina","Qatar"],
-  ["Suiza","Canadá"],
-  // ── GRUPO C: Brasil, Marruecos, Escocia, Haití ──
-  ["Brasil","Escocia"],
-  ["Marruecos","Haití"],
-  ["Brasil","Marruecos"],
-  ["Haití","Escocia"],
-  ["Escocia","Marruecos"],
-  ["Haití","Brasil"],
-  // ── GRUPO D: Estados Unidos, Turquía, Australia, Paraguay ──
-  ["Estados Unidos","Paraguay"],
-  ["Australia","Turquía"],
-  ["Estados Unidos","Australia"],
-  ["Turquía","Paraguay"],
-  ["Paraguay","Australia"],
-  ["Turquía","Estados Unidos"],
-  // ── GRUPO E: Alemania, Ecuador, Costa de Marfil, Curazao ──
-  ["Alemania","Ecuador"],
-  ["Costa de Marfil","Curazao"],
-  ["Alemania","Costa de Marfil"],
-  ["Ecuador","Curazao"],
-  ["Curazao","Alemania"],
-  ["Ecuador","Costa de Marfil"],
-  // ── GRUPO F: Países Bajos, Japón, Túnez, Suecia ──
-  ["Países Bajos","Japón"],
-  ["Túnez","Suecia"],
-  ["Países Bajos","Túnez"],
-  ["Japón","Suecia"],
-  ["Suecia","Países Bajos"],
-  ["Japón","Túnez"],
-  // ── GRUPO G: Bélgica, Irán, Egipto, Nueva Zelanda ──
-  ["Bélgica","Irán"],
-  ["Egipto","Nueva Zelanda"],
-  ["Bélgica","Egipto"],
-  ["Irán","Nueva Zelanda"],
-  ["Nueva Zelanda","Bélgica"],
-  ["Irán","Egipto"],
-  // ── GRUPO H: España, Uruguay, Arabia Saudita, Cabo Verde ──
-  ["España","Uruguay"],
-  ["Arabia Saudita","Cabo Verde"],
-  ["España","Arabia Saudita"],
-  ["Uruguay","Cabo Verde"],
-  ["Cabo Verde","España"],
-  ["Uruguay","Arabia Saudita"],
-  // ── GRUPO I: Francia, Senegal, Noruega, Irak ──
-  ["Francia","Noruega"],
-  ["Senegal","Irak"],
-  ["Francia","Senegal"],
-  ["Noruega","Irak"],
-  ["Irak","Francia"],
-  ["Noruega","Senegal"],
-  // ── GRUPO J: Argentina, Austria, Argelia, Jordania ──
-  ["Argentina","Argelia"],
-  ["Austria","Jordania"],
-  ["Argentina","Austria"],
-  ["Argelia","Jordania"],
-  ["Jordania","Argentina"],
-  ["Argelia","Austria"],
-  // ── GRUPO K: Portugal, Colombia, Uzbekistán, RD Congo ──
-  ["Portugal","Uzbekistán"],
-  ["Colombia","RD Congo"],
-  ["Portugal","Colombia"],
-  ["Uzbekistán","RD Congo"],
-  ["RD Congo","Portugal"],
-  ["Uzbekistán","Colombia"],
-  // ── GRUPO L: Inglaterra, Croacia, Panamá, Ghana ──
-  ["Inglaterra","Panamá"],
-  ["Croacia","Ghana"],
-  ["Inglaterra","Croacia"],
-  ["Panamá","Ghana"],
-  ["Ghana","Inglaterra"],
-  ["Panamá","Croacia"],
+// ── PARTIDOS MUNDIAL 2026 POR RONDA ──
+// Cada ronda tiene 24 partidos (2 por grupo × 12 grupos)
+
+const RONDA1 = [
+  // Jornada 1 — Partido 1 de cada grupo
+  ["México","Sudáfrica"],          // A
+  ["Corea del Sur","Rep. Checa"],  // A
+  ["Canadá","Bosnia y Herzegovina"],// B
+  ["Qatar","Suiza"],               // B
+  ["Brasil","Escocia"],            // C
+  ["Marruecos","Haití"],           // C
+  ["Estados Unidos","Paraguay"],   // D
+  ["Australia","Turquía"],         // D
+  ["Alemania","Ecuador"],          // E
+  ["Costa de Marfil","Curazao"],   // E
+  ["Países Bajos","Japón"],        // F
+  ["Túnez","Suecia"],              // F
+  ["Bélgica","Irán"],              // G
+  ["Egipto","Nueva Zelanda"],      // G
+  ["España","Uruguay"],            // H
+  ["Arabia Saudita","Cabo Verde"], // H
+  ["Francia","Noruega"],           // I
+  ["Senegal","Irak"],              // I
+  ["Argentina","Argelia"],         // J
+  ["Austria","Jordania"],          // J
+  ["Portugal","Uzbekistán"],       // K
+  ["Colombia","RD Congo"],         // K
+  ["Inglaterra","Panamá"],         // L
+  ["Croacia","Ghana"],             // L
 ];
 
-async function cargarMundial(){
-  if(!confirm('¿Cargar los 36 partidos de fase de grupos del Mundial 2026? Esto reemplazará los partidos actuales.')) return;
+const RONDA2 = [
+  // Jornada 2 — Partido 2 de cada grupo
+  ["México","Corea del Sur"],      // A
+  ["Rep. Checa","Sudáfrica"],      // A
+  ["Canadá","Qatar"],              // B
+  ["Suiza","Bosnia y Herzegovina"],// B
+  ["Brasil","Marruecos"],          // C
+  ["Haití","Escocia"],             // C
+  ["Estados Unidos","Australia"],  // D
+  ["Turquía","Paraguay"],          // D
+  ["Alemania","Costa de Marfil"],  // E
+  ["Ecuador","Curazao"],           // E
+  ["Países Bajos","Túnez"],        // F
+  ["Japón","Suecia"],              // F
+  ["Bélgica","Egipto"],            // G
+  ["Irán","Nueva Zelanda"],        // G
+  ["España","Arabia Saudita"],     // H
+  ["Uruguay","Cabo Verde"],        // H
+  ["Francia","Senegal"],           // I
+  ["Noruega","Irak"],              // I
+  ["Argentina","Austria"],         // J
+  ["Argelia","Jordania"],          // J
+  ["Portugal","Colombia"],         // K
+  ["Uzbekistán","RD Congo"],       // K
+  ["Inglaterra","Croacia"],        // L
+  ["Panamá","Ghana"],              // L
+];
+
+const RONDA3 = [
+  // Jornada 3 — Partido 3 de cada grupo (simultáneos)
+  ["Sudáfrica","Corea del Sur"],   // A
+  ["Rep. Checa","México"],         // A
+  ["Bosnia y Herzegovina","Qatar"],// B
+  ["Suiza","Canadá"],              // B
+  ["Escocia","Marruecos"],         // C
+  ["Haití","Brasil"],              // C
+  ["Paraguay","Australia"],        // D
+  ["Turquía","Estados Unidos"],    // D
+  ["Curazao","Alemania"],          // E
+  ["Ecuador","Costa de Marfil"],   // E
+  ["Suecia","Países Bajos"],       // F
+  ["Japón","Túnez"],               // F
+  ["Nueva Zelanda","Bélgica"],     // G
+  ["Irán","Egipto"],               // G
+  ["Cabo Verde","España"],         // H
+  ["Uruguay","Arabia Saudita"],    // H
+  ["Irak","Francia"],              // I
+  ["Noruega","Senegal"],           // I
+  ["Jordania","Argentina"],        // J
+  ["Argelia","Austria"],           // J
+  ["RD Congo","Portugal"],         // K
+  ["Uzbekistán","Colombia"],       // K
+  ["Ghana","Inglaterra"],          // L
+  ["Panamá","Croacia"],            // L
+];
+
+async function cargarRonda(num){
+  const rondas = {1: RONDA1, 2: RONDA2, 3: RONDA3};
+  const partidos = rondas[num];
+  if(!confirm(`¿Cargar los 24 partidos de la Jornada ${num}? Esto reemplazará los partidos actuales.`)) return;
   showLoader(true);
   try {
-    const partidos = PARTIDOS_MUNDIAL_2026.map(p => [...p]);
-    const resultados = new Array(partidos.length).fill(null);
-    cfg.partidos = partidos;
-    cfg.resultados = resultados;
+    cfg.partidos = partidos.map(p => [...p]);
+    cfg.resultados = new Array(partidos.length).fill(null);
     await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
     renderPartidos();
-    mostrarAlerta('al-pt', `✓ ${partidos.length} partidos de fase de grupos del Mundial 2026 cargados (Grupos A-L).`, 'exito');
+    mostrarAlerta('al-pt', `✓ 24 partidos de Jornada ${num} cargados correctamente.`, 'exito');
   } catch(e) {
     mostrarAlerta('al-pt', 'Error al cargar partidos.', 'error');
     console.error(e);
@@ -502,7 +500,7 @@ function calcPts(ps,res){
 }
 function mostrarAlerta(id,msg,tipo){const el=document.getElementById(id);el.textContent=msg;el.className='alerta '+tipo+' visible';setTimeout(()=>el.classList.remove('visible'),3500);}
 
-window.login=login;window.salir=salir;window.irA=irA;window.cargarMundial=cargarMundial;
+window.login=login;window.salir=salir;window.irA=irA;window.cargarRonda=cargarRonda;
 window.setPub=setPub;window.setRes=setRes;window.guardarPartidos=guardarPartidos;
 window.agregarPartido=agregarPartido;window.quitarPartido=quitarPartido;
 window.filtrarEquipos=filtrarEquipos;window.mostrarDropdown=mostrarDropdown;window.enfocarEquipo=enfocarEquipo;
