@@ -252,3 +252,19 @@ tr:last-child td { border-bottom:none; }
 }
 .partido-row-mundial:last-child { border-bottom: none; }
 .vs-sep { font-size: 11px; color: var(--tx3); text-align: center; }
+
+/* ── RESETEAR QUINIELA BTN ── */
+.btn-reset-q {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--az);
+  background: transparent;
+  color: var(--az);
+  cursor: pointer;
+  opacity: .7;
+  transition: opacity .12s;
+  font-family: var(--f);
+  white-space: nowrap;
+}
+.btn-reset-q:hover { opacity: 1; }

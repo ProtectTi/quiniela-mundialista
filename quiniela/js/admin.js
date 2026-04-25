@@ -423,17 +423,33 @@ async function renderJugadores(){
       <td style="font-weight:500;">${p.nombre}</td>
       <td>${p.picks?'<span style="color:var(--vd);font-size:12px;">✓ Registrada</span>':'<span class="sin-q">Sin quiniela</span>'}</td>
       <td>${p.picks?`<span class="pts-badge">${pts}/${total}</span>`:'—'}</td>
-      <td><button class="btn-del" onclick="event.stopPropagation();window.borrarJugador('${p.id}','${p.nombre}')">Borrar</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${p.picks?`<button class="btn-reset-q" onclick="event.stopPropagation();window.resetearQuiniela('${p.id}','${p.nombre}')">Resetear picks</button>`:''}
+        <button class="btn-del" onclick="event.stopPropagation();window.borrarJugador('${p.id}','${p.nombre}')">Borrar cuenta</button>
+      </td>
     </tr>
     ${p.picks?`<tr><td colspan="5" style="padding:0;"><div class="picks-detalle" id="picks-${pi}"><div class="picks-wrap"><div class="picks-grid">${picksHtml}</div></div></div></td></tr>`:''}`;
   }).join('');
 }
 
 function togPicks(pi){const el=document.getElementById('picks-'+pi);if(el)el.classList.toggle('open');}
+
 async function borrarJugador(id,nombre){
-  if(!confirm(`¿Borrar la cuenta de "${nombre}"?`))return;
+  if(!confirm(`¿Borrar la cuenta de "${nombre}"? Esto elimina su cuenta y quiniela.`))return;
   await deleteDoc(doc(db,'jugadores',id));
-  mostrarAlerta('al-jug','Jugador eliminado.','info');renderJugadores();
+  mostrarAlerta('al-jug','Jugador eliminado.','info');
+  renderJugadores();
+}
+
+async function resetearQuiniela(id,nombre){
+  if(!confirm(`¿Resetear la quiniela de "${nombre}"? Su cuenta se mantiene pero sus picks se borran.`))return;
+  try{
+    await updateDoc(doc(db,'jugadores',id),{picks:null});
+    mostrarAlerta('al-jug',`Quiniela de ${nombre} reseteada. Ya puede volver a llenarla.`,'exito');
+    renderJugadores();
+  }catch(e){
+    mostrarAlerta('al-jug','Error al resetear.','error');
+  }
 }
 
 // ── POSICIONES ──
@@ -491,5 +507,5 @@ window.setPub=setPub;window.setRes=setRes;window.guardarPartidos=guardarPartidos
 window.agregarPartido=agregarPartido;window.quitarPartido=quitarPartido;
 window.filtrarEquipos=filtrarEquipos;window.mostrarDropdown=mostrarDropdown;window.enfocarEquipo=enfocarEquipo;
 window.ocultarDropdown=ocultarDropdown;window.elegirEquipo=elegirEquipo;
-window.togPicks=togPicks;window.borrarJugador=borrarJugador;
+window.togPicks=togPicks;window.borrarJugador=borrarJugador;window.resetearQuiniela=resetearQuiniela;
 window.cambiarPwd=cambiarPwd;window.resetearTodo=resetearTodo;
