@@ -29,7 +29,9 @@ function cfgDesdeFirestore(d){
   return {
     partidos: (d.partidos||[]).map(p=> Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
     resultados: d.resultados||(d.partidos||[]).map(()=>null),
-    publicado: d.publicado||false
+    publicado: d.publicado||false,
+    jornada: d.jornada||1,
+    historial: d.historial||{}
   };
 }
 
@@ -176,8 +178,7 @@ async function renderMiQ(){
   const cont=document.getElementById('mq-contenido');
   showLoader(false);
   if(jug&&jug.picks){
-    const{pts,pend}=calcPts(jug.picks,cfg.resultados);
-    const totalPartidos=cfg.partidos.length;
+    const{pts,pend,total:totalPartidos}=calcPtsTotales(jug);
     const picksGuardados=jug.picks;
 
     // Partidos ya pronosticados
@@ -250,7 +251,7 @@ async function renderMiQ(){
     cont.innerHTML=`
       <div class="mq-banner">
         <div class="mq-t">Quiniela registrada 🔒</div>
-        <div class="mq-s">${pts} aciertos confirmados · ${pend} partidos pendientes</div>
+        <div class="mq-s">${pts} aciertos de ${totalPartidos} partidos · ${pend} pendientes</div>
         <div class="picks-lista">${itemsGuardados}</div>
       </div>
       ${seccionNuevos}`;
@@ -414,12 +415,12 @@ async function renderPos(){
     const jugadores=[];snaps.forEach(d=>{if(d.data().picks)jugadores.push(d.data());});
     if(!jugadores.length){cont.innerHTML=`<div class="bloqueado"><div style="font-size:36px;margin-bottom:10px;">🏆</div><div class="bloq-t">Sin jugadores aún</div><div class="bloq-s">Las posiciones aparecerán cuando los jugadores registren sus quinielas.</div></div>`;showLoader(false);return;}
     const totalPartidos=cfg.partidos.length;
-  const ranking=jugadores.map(p=>{const{pts,pend}=calcPts(p.picks,cfg.resultados);return{nombre:p.nombre,pts,pend};}).sort((a,b)=>b.pts-a.pts);
+  const ranking=jugadores.map(p=>{const{pts,pend,total}=calcPtsTotales(p);return{nombre:p.nombre,pts,pend,total};}).sort((a,b)=>b.pts-a.pts);
     const filas=ranking.map((r,i)=>{
       const esYo=r.nombre===sesion.nombre;const cls=i===0?'pos oro':i===1?'pos plata':i===2?'pos bronce':'pos';
-      const pc=totalPartidos>0?Math.round(r.pts/totalPartidos*100):0;
+      const pc=r.total>0?Math.round(r.pts/r.total*100):0;
       return `<tr class="${esYo?'yo-row':''}"><td class="${cls}">${i+1}</td><td style="font-weight:500;">${r.nombre}${esYo?' <span style="font-size:11px;color:var(--am);">(tú)</span>':''}</td>
-      <td><span class="pts-badge">${r.pts}/${totalPartidos}</span></td><td style="color:var(--tx3);font-size:12px;">${r.pend}</td>
+      <td><span class="pts-badge">${r.pts}/${r.total}</span></td><td style="color:var(--tx3);font-size:12px;">${r.pend}</td>
       <td><div style="height:4px;background:var(--borde);border-radius:2px;overflow:hidden;min-width:60px;"><div style="height:100%;width:${pc}%;background:var(--vd);border-radius:2px;"></div></div></td></tr>`;
     }).join('');
     cont.innerHTML=`<div class="card"><table><thead><tr><th>#</th><th>Jugador</th><th>Aciertos</th><th>Pend.</th><th>Progreso</th></tr></thead><tbody>${filas}</tbody></table></div>`;
@@ -427,7 +428,46 @@ async function renderPos(){
   showLoader(false);
 }
 
-function calcPts(ps,res){let pts=0,pend=0;res.forEach((r,i)=>{if(r===null)pend++;else if(ps[i]===r)pts++;});return{pts,pend};}
+function calcPts(ps,res){
+  const n=Math.min(ps.length,res.length,cfg?cfg.partidos.length:ps.length);
+  let pts=0,pend=0;
+  for(let i=0;i<n;i++){if(res[i]===null)pend++;else if(ps[i]===res[i])pts++;}
+  return{pts,pend,total:n};
+}
+
+function calcPtsTotales(jugData){
+  if(!cfg)return{pts:0,pend:0,total:0};
+  let ptsTotal=0,totalPartidos=0,pendTotal=0;
+  const historial=cfg.historial||{};
+  // Sumar jornadas anteriores
+  for(let j=1;j<(cfg.jornada||1);j++){
+    const picksJ=jugData[`picksJ${j}`];
+    const histJ=historial[`jornada${j}`];
+    if(picksJ&&histJ){
+      const resJ=histJ.resultados||[];
+      const partJ=(histJ.partidos||[]).map(p=>Array.isArray(p)?p:[p.l,p.v]);
+      const n=Math.min(picksJ.length,resJ.length,partJ.length);
+      totalPartidos+=n;
+      for(let i=0;i<n;i++){if(resJ[i]!==null&&picksJ[i]===resJ[i])ptsTotal++;}
+    }
+  }
+  // Jornada actual
+  const picksActual=jugData.picks;
+  const res=cfg.resultados||[];
+  const nAct=cfg.partidos.length;
+  totalPartidos+=nAct;
+  if(picksActual){
+    const n=Math.min(picksActual.length,res.length,nAct);
+    for(let i=0;i<n;i++){
+      if(res[i]===null)pendTotal++;
+      else if(picksActual[i]===res[i])ptsTotal++;
+    }
+    pendTotal+=nAct-Math.min(picksActual.length,nAct);
+  } else {
+    pendTotal+=nAct;
+  }
+  return{pts:ptsTotal,pend:pendTotal,total:totalPartidos};
+}
 function mostrarAlerta(el,msg,tipo){el.textContent=msg;el.className='alerta '+tipo+' visible';setTimeout(()=>el.classList.remove('visible'),3500);}
 function mostrarErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',3000);}
 

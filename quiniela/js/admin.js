@@ -132,62 +132,59 @@ async function cargarRonda(num){
   const rondas = {1: RONDA1, 2: RONDA2, 3: RONDA3};
   const nuevosPartidos = rondas[num];
 
-  // Calcular cuántos partidos ya hay guardados
-  const partidosActuales = cfg.partidos.length;
-  const yaExisteJornada = partidosActuales > 0;
-
-  // Advertencia según si hay partidos previos o no
   const msg = num === 1
-    ? `¿Cargar la Jornada 1 (24 partidos)?\n\n⚠️ Esto reemplazará cualquier jornada existente y reseteará los picks de todos los jugadores.`
-    : `¿Agregar la Jornada ${num} (24 partidos)?\n\nℹ️ Se agregarán a los ${partidosActuales} partidos existentes.\nLos picks anteriores de los jugadores se conservan.`;
+    ? `¿Cargar Jornada 1?\n⚠️ Borrará partidos y picks actuales de todos.`
+    : `¿Cargar Jornada ${num}?\nLos jugadores deberán llenar sus picks nuevamente para esta jornada.\nLos resultados anteriores se conservan.`;
 
   if(!confirm(msg)) return;
   showLoader(true);
 
   try {
-    if(num === 1){
-      // Jornada 1: reemplaza todo y resetea picks
-      cfg.partidos = nuevosPartidos.map(p => [...p]);
-      cfg.resultados = new Array(nuevosPartidos.length).fill(null);
-      cfg.publicado = false;
-      cfg.jornada = 1;
-      await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
+    // Guardar jornada activa y sus partidos en config
+    // Cada jornada se guarda en su propia clave: jornada1, jornada2, jornada3
+    // La jornada activa es la que los jugadores ven
 
-      // Resetear picks de todos los jugadores
-      const snaps = await getDocs(jugadoresC);
-      const resets = [];
-      snaps.forEach(d => resets.push(updateDoc(doc(db,'jugadores',d.id), {picks: null})));
-      await Promise.all(resets);
-      mostrarAlerta('al-pt', `✓ Jornada 1 cargada. Picks reseteados.`, 'exito');
-
-    } else {
-      // Jornada 2 o 3: AGREGA partidos a los existentes
-      const partidosPrevios = cfg.partidos;
-      const resultadosPrevios = cfg.resultados;
-
-      cfg.partidos = [...partidosPrevios, ...nuevosPartidos.map(p => [...p])];
-      cfg.resultados = [...resultadosPrevios, ...new Array(nuevosPartidos.length).fill(null)];
-      cfg.jornada = num;
-      await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
-
-      // Solo marcar picks pendientes (agregar nulls para nuevos partidos)
-      // Los picks existentes se conservan, solo se notifica al jugador
-      const snaps = await getDocs(jugadoresC);
-      const updates = [];
-      snaps.forEach(d => {
-        const data = d.data();
-        if(data.picks) {
-          // El jugador ya tiene picks — sus picks anteriores se conservan
-          // Los nuevos partidos aparecerán como "pendientes" automáticamente
-          // No necesitamos hacer nada, el sistema detecta picks.length < partidos.length
-          // y muestra los nuevos partidos para llenar
-        }
-      });
-
-      mostrarAlerta('al-pt', `✓ Jornada ${num} agregada. ${nuevosPartidos.length} partidos nuevos añadidos a los ${partidosPrevios.length} anteriores.`, 'exito');
+    // 1. Si hay jornada previa, guardar sus resultados antes de cambiar
+    if(num > 1 && cfg.jornada){
+      const claveAnterior = `jornada${cfg.jornada}`;
+      // Guardar partidos y resultados de jornada anterior en config
+      const historial = cfg.historial || {};
+      historial[claveAnterior] = {
+        partidos: cfg.partidos,
+        resultados: cfg.resultados
+      };
+      cfg.historial = historial;
     }
 
+    // 2. Cargar nueva jornada como activa
+    cfg.partidos = nuevosPartidos.map(p => [...p]);
+    cfg.resultados = new Array(nuevosPartidos.length).fill(null);
+    cfg.publicado = false;
+    cfg.jornada = num;
+
+    await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
+
+    // 3. Resetear picks de jornada activa en jugadores
+    // pero guardar picks anteriores en picksJ1, picksJ2, etc.
+    const snaps = await getDocs(jugadoresC);
+    const updates = [];
+    snaps.forEach(d => {
+      const data = d.data();
+      const update = {};
+
+      if(num > 1 && data.picks) {
+        // Guardar picks anteriores
+        update[`picksJ${num-1}`] = data.picks;
+      }
+      // Resetear picks actuales para nueva jornada
+      update.picks = null;
+
+      updates.push(updateDoc(doc(db,'jugadores',d.id), update));
+    });
+    await Promise.all(updates);
+
     renderPartidos();
+    mostrarAlerta('al-pt', `✓ Jornada ${num} cargada. Los jugadores pueden llenar sus nuevos picks.`, 'exito');
   } catch(e) {
     mostrarAlerta('al-pt', 'Error: ' + e.message, 'error');
     console.error(e);
@@ -455,7 +452,7 @@ async function renderJugadores(){
   const tbody=document.getElementById('tbody-jug');
   if(!n){tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:28px;">No hay jugadores.</td></tr>`;return;}
   tbody.innerHTML=jugadores.map((p,pi)=>{
-    const calcR=p.picks&&cfg?calcPts(p.picks,cfg.resultados):{pts:'-',pend:'-',total:0};const{pts,pend}=calcR;const total=calcR.total||cfg?.partidos.length||0;
+    const calcR=calcPtsTotales(p);const{pts,pend,total}=calcR;
     const picksHtml=p.picks&&cfg?cfg.partidos.map(([l,v],i)=>{
       const r=cfg.resultados[i];const ok=r!==null&&p.picks[i]===r;const mal=r!==null&&p.picks[i]!==r;
       const elegido=p.picks[i]==='L'?l:p.picks[i]==='V'?v:null;
@@ -505,16 +502,16 @@ async function renderPos(){
   const cont=document.getElementById('cont-pos');
   showLoader(true);
   const snaps=await getDocs(jugadoresC);
-  const jugadores=[];snaps.forEach(d=>{if(d.data().picks)jugadores.push(d.data());});
+  const jugadores=[];snaps.forEach(d=>jugadores.push(d.data()));
   showLoader(false);
-  if(!jugadores.length){cont.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:28px;">No hay jugadores con quiniela.</td></tr>`;return;}
-  const totalPartidos=cfg.partidos.length;
-  const ranking=jugadores.map(p=>{const{pts,pend}=calcPts(p.picks,cfg.resultados);return{nombre:p.nombre,pts,pend,total:totalPartidos};}).sort((a,b)=>b.pts-a.pts);
+  const conPicks=jugadores.filter(p=>p.picks||Object.keys(p).some(k=>k.startsWith('picksJ')));
+  if(!conPicks.length){cont.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:28px;">No hay jugadores con quiniela.</td></tr>`;return;}
+  const ranking=conPicks.map(p=>{const{pts,pend,total}=calcPtsTotales(p);return{nombre:p.nombre,pts,pend,total};}).sort((a,b)=>b.pts-a.pts);
   document.getElementById('tbody-pos').innerHTML=ranking.map((r,i)=>{
     const cls=i===0?'pos oro':i===1?'pos plata':i===2?'pos bronce':'pos';
-    const pc=totalPartidos>0?Math.round(r.pts/totalPartidos*100):0;
+    const pc=r.total>0?Math.round(r.pts/r.total*100):0;
     return `<tr><td class="${cls}">${i+1}</td><td style="font-weight:500;">${r.nombre}</td>
-    <td><span class="pts-badge">${r.pts}/${totalPartidos}</span></td><td style="color:var(--tx3);font-size:12px;">${r.pend}</td>
+    <td><span class="pts-badge">${r.pts}/${r.total}</span></td><td style="color:var(--tx3);font-size:12px;">${r.pend}</td>
     <td><div style="height:4px;background:var(--borde);border-radius:2px;overflow:hidden;min-width:60px;"><div style="height:100%;width:${pc}%;background:var(--vd);border-radius:2px;"></div></div></td></tr>`;
   }).join('');
 }
@@ -546,6 +543,33 @@ function calcPts(ps,res){
     else if(ps[i]===res[i])pts++;
   }
   return{pts,pend,total:n};
+}
+
+function calcPtsTotales(jugData){
+  if(!cfg)return{pts:0,pend:0,total:0};
+  let ptsTotal=0,totalPartidos=0,pendTotal=0;
+  const historial=cfg.historial||{};
+  for(let j=1;j<(cfg.jornada||1);j++){
+    const picksJ=jugData[`picksJ${j}`];
+    const histJ=historial[`jornada${j}`];
+    if(picksJ&&histJ){
+      const resJ=histJ.resultados||[];
+      const partJ=(histJ.partidos||[]).map(p=>Array.isArray(p)?p:[p.l,p.v]);
+      const n=Math.min(picksJ.length,resJ.length,partJ.length);
+      totalPartidos+=n;
+      for(let i=0;i<n;i++){if(resJ[i]!==null&&picksJ[i]===resJ[i])ptsTotal++;}
+    }
+  }
+  const picksActual=jugData.picks;
+  const res=cfg.resultados||[];
+  const nAct=cfg.partidos.length;
+  totalPartidos+=nAct;
+  if(picksActual){
+    const n=Math.min(picksActual.length,res.length,nAct);
+    for(let i=0;i<n;i++){if(res[i]===null)pendTotal++;else if(picksActual[i]===res[i])ptsTotal++;}
+    pendTotal+=nAct-Math.min(picksActual.length,nAct);
+  }else{pendTotal+=nAct;}
+  return{pts:ptsTotal,pend:pendTotal,total:totalPartidos};
 }
 function mostrarAlerta(id,msg,tipo){const el=document.getElementById(id);el.textContent=msg;el.className='alerta '+tipo+' visible';setTimeout(()=>el.classList.remove('visible'),3500);}
 
