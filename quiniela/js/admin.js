@@ -130,17 +130,66 @@ const RONDA3 = [
 
 async function cargarRonda(num){
   const rondas = {1: RONDA1, 2: RONDA2, 3: RONDA3};
-  const partidos = rondas[num];
-  if(!confirm(`¿Cargar los 24 partidos de la Jornada ${num}? Esto reemplazará los partidos actuales.`)) return;
+  const nuevosPartidos = rondas[num];
+
+  // Calcular cuántos partidos ya hay guardados
+  const partidosActuales = cfg.partidos.length;
+  const yaExisteJornada = partidosActuales > 0;
+
+  // Advertencia según si hay partidos previos o no
+  const msg = num === 1
+    ? `¿Cargar la Jornada 1 (24 partidos)?\n\n⚠️ Esto reemplazará cualquier jornada existente y reseteará los picks de todos los jugadores.`
+    : `¿Agregar la Jornada ${num} (24 partidos)?\n\nℹ️ Se agregarán a los ${partidosActuales} partidos existentes.\nLos picks anteriores de los jugadores se conservan.`;
+
+  if(!confirm(msg)) return;
   showLoader(true);
+
   try {
-    cfg.partidos = partidos.map(p => [...p]);
-    cfg.resultados = new Array(partidos.length).fill(null);
-    await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
+    if(num === 1){
+      // Jornada 1: reemplaza todo y resetea picks
+      cfg.partidos = nuevosPartidos.map(p => [...p]);
+      cfg.resultados = new Array(nuevosPartidos.length).fill(null);
+      cfg.publicado = false;
+      cfg.jornada = 1;
+      await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
+
+      // Resetear picks de todos los jugadores
+      const snaps = await getDocs(jugadoresC);
+      const resets = [];
+      snaps.forEach(d => resets.push(updateDoc(doc(db,'jugadores',d.id), {picks: null})));
+      await Promise.all(resets);
+      mostrarAlerta('al-pt', `✓ Jornada 1 cargada. Picks reseteados.`, 'exito');
+
+    } else {
+      // Jornada 2 o 3: AGREGA partidos a los existentes
+      const partidosPrevios = cfg.partidos;
+      const resultadosPrevios = cfg.resultados;
+
+      cfg.partidos = [...partidosPrevios, ...nuevosPartidos.map(p => [...p])];
+      cfg.resultados = [...resultadosPrevios, ...new Array(nuevosPartidos.length).fill(null)];
+      cfg.jornada = num;
+      await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
+
+      // Solo marcar picks pendientes (agregar nulls para nuevos partidos)
+      // Los picks existentes se conservan, solo se notifica al jugador
+      const snaps = await getDocs(jugadoresC);
+      const updates = [];
+      snaps.forEach(d => {
+        const data = d.data();
+        if(data.picks) {
+          // El jugador ya tiene picks — sus picks anteriores se conservan
+          // Los nuevos partidos aparecerán como "pendientes" automáticamente
+          // No necesitamos hacer nada, el sistema detecta picks.length < partidos.length
+          // y muestra los nuevos partidos para llenar
+        }
+      });
+
+      mostrarAlerta('al-pt', `✓ Jornada ${num} agregada. ${nuevosPartidos.length} partidos nuevos añadidos a los ${partidosPrevios.length} anteriores.`, 'exito');
+    }
+
     renderPartidos();
-    mostrarAlerta('al-pt', `✓ 24 partidos de Jornada ${num} cargados correctamente.`, 'exito');
   } catch(e) {
-    mostrarAlerta('al-pt', 'Error al cargar partidos.', 'error');
+    mostrarAlerta('al-pt', 'Error: ' + e.message, 'error');
     console.error(e);
   }
   showLoader(false);
