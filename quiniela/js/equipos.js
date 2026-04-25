@@ -58,6 +58,9 @@ const EQUIPOS = [
   { nombre: "Qatar",              codigo: "qa",     bandera: "https://flagcdn.com/qa.svg" },
   { nombre: "Venezuela",          codigo: "ve",     bandera: "https://flagcdn.com/ve.svg" },
   { nombre: "Costa de Marfil",    codigo: "ci",     bandera: "https://flagcdn.com/ci.svg" },
+  { nombre: "Argelia",            codigo: "dz",     bandera: "https://flagcdn.com/dz.svg" },
+  { nombre: "Ghana",              codigo: "gh",     bandera: "https://flagcdn.com/gh.svg" },
+  { nombre: "Túnez",              codigo: "tn",     bandera: "https://flagcdn.com/tn.svg" },
 ];
 
 export default EQUIPOS;
