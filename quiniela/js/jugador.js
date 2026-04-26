@@ -155,7 +155,7 @@ async function renderInicio(){
   const snap=await getDoc(doc(db,'jugadores',sesion.nombre.toLowerCase()));
   const jug=snap.exists()?snap.data():null;
 
-  // Si el jugador está bloqueado, mostrar pantalla en blanco
+  // Si el jugador está bloqueado
   if(jug&&jug.bloqueado){
     document.getElementById('ini-sub').textContent='Tu quiniela ha sido reseteada por el administrador.';
     document.getElementById('stats-ini').innerHTML='';
@@ -168,24 +168,39 @@ async function renderInicio(){
     return;
   }
 
-  // Si fue restablecido (sin picks), mostrar partidos siempre como Pendiente
-  const sinPicks = !jug || (!jug.picks && !Object.keys(jug||{}).some(k=>k.startsWith('picksJ')));
+  // Verificar si el jugador tiene algún pick guardado (cualquier jornada)
+  const tienePicks = jug && (jug.picks || Object.keys(jug||{}).some(k=>k.startsWith('picksJ')));
 
-  document.getElementById('ini-sub').textContent=jug&&jug.picks?'Tu quiniela está registrada ✓':'Aún no has llenado tu quiniela';
+  document.getElementById('ini-sub').textContent = tienePicks
+    ? (jug.picks ? 'Tu quiniela está registrada ✓' : 'Jornada anterior completada ✓')
+    : 'Aún no has llenado tu quiniela';
+
   const tot=cfg.partidos.length;
   document.getElementById('stats-ini').innerHTML=`
     <div class="stat"><div class="stat-n">${tot}</div><div class="stat-l">Partidos</div></div>
     <div class="stat"><div class="stat-n">${comp}</div><div class="stat-l">Resultados</div></div>
     <div class="stat"><div class="stat-n">${tot-comp}</div><div class="stat-l">Por jugar</div></div>`;
+
+  // Si no tiene picks, NO mostrar los partidos (solo invitar a llenar quiniela)
+  if(!tienePicks){
+    document.getElementById('ini-partidos').innerHTML=`
+      <div class="bloqueado">
+        <div style="font-size:36px;margin-bottom:10px;">⚽</div>
+        <div class="bloq-t">¡Llena tu quiniela!</div>
+        <div class="bloq-s">Ve a <strong>Mi quiniela</strong> para hacer tus pronósticos.</div>
+      </div>`;
+    return;
+  }
+
+  // Si tiene picks, mostrar partidos con resultados normalmente
   document.getElementById('ini-partidos').innerHTML=cfg.partidos.map(([l,v],i)=>{
     const r=cfg.resultados[i];
-    const ganador = r==='L'?l:r==='V'?v:null;
-    const eq = ganador ? getEquipo(ganador) : null;
-    // Solo mostrar resultado si el jugador tiene picks
-    const chip = (r && !sinPicks)
-      ? `<span class="chip chip-v" style="display:flex;align-items:center;gap:4px;">${eq?`<img src="${eq.bandera}" style="width:16px;height:11px;object-fit:cover;border-radius:2px;" alt="">`:''}${ganador||'Empate'}</span>`
-      : `<span class="chip chip-g">Pendiente</span>`;
-    const eqL=getEquipo(l); const eqV=getEquipo(v);
+    const ganador=r==='L'?l:r==='V'?v:null;
+    const eq=ganador?getEquipo(ganador):null;
+    const chip=r
+      ?`<span class="chip chip-v" style="display:flex;align-items:center;gap:4px;">${eq?`<img src="${eq.bandera}" style="width:16px;height:11px;object-fit:cover;border-radius:2px;" alt="">`:''} ${ganador||'Empate'}</span>`
+      :`<span class="chip chip-g">Pendiente</span>`;
+    const eqL=getEquipo(l);const eqV=getEquipo(v);
     return `<div class="p-row">
       <span style="color:var(--tx3);font-size:11px;width:22px;">${i+1}</span>
       <span style="flex:1;display:flex;align-items:center;gap:5px;">${eqL?`<img src="${eqL.bandera}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;" alt="">`:''}${l}</span>
