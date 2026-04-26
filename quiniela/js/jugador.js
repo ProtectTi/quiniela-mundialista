@@ -169,8 +169,7 @@ async function renderInicio(){
   }
 
   // Si fue restablecido (sin picks), mostrar partidos siempre como Pendiente
-  const fueRestablecido = jug && !jug.picks && !jug.bloqueado && jug.creadoEn;
-  const sinPicks = !jug || (!jug.picks && !Object.keys(jug).some(k=>k.startsWith('picksJ')));
+  const sinPicks = !jug || (!jug.picks && !Object.keys(jug||{}).some(k=>k.startsWith('picksJ')));
 
   document.getElementById('ini-sub').textContent=jug&&jug.picks?'Tu quiniela está registrada ✓':'Aún no has llenado tu quiniela';
   const tot=cfg.partidos.length;
@@ -182,7 +181,8 @@ async function renderInicio(){
     const r=cfg.resultados[i];
     const ganador = r==='L'?l:r==='V'?v:null;
     const eq = ganador ? getEquipo(ganador) : null;
-    const chip = r
+    // Solo mostrar resultado si el jugador tiene picks
+    const chip = (r && !sinPicks)
       ? `<span class="chip chip-v" style="display:flex;align-items:center;gap:4px;">${eq?`<img src="${eq.bandera}" style="width:16px;height:11px;object-fit:cover;border-radius:2px;" alt="">`:''}${ganador||'Empate'}</span>`
       : `<span class="chip chip-g">Pendiente</span>`;
     const eqL=getEquipo(l); const eqV=getEquipo(v);
