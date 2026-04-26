@@ -168,6 +168,10 @@ async function renderInicio(){
     return;
   }
 
+  // Si fue restablecido (sin picks), mostrar partidos siempre como Pendiente
+  const fueRestablecido = jug && !jug.picks && !jug.bloqueado && jug.creadoEn;
+  const sinPicks = !jug || (!jug.picks && !Object.keys(jug).some(k=>k.startsWith('picksJ')));
+
   document.getElementById('ini-sub').textContent=jug&&jug.picks?'Tu quiniela está registrada ✓':'Aún no has llenado tu quiniela';
   const tot=cfg.partidos.length;
   document.getElementById('stats-ini').innerHTML=`
