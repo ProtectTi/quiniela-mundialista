@@ -26,12 +26,21 @@ let picks  = [];
 let cfg    = null;
 
 function cfgDesdeFirestore(d){
+  const historial = {};
+  if(d.historial){
+    for(const [clave, val] of Object.entries(d.historial)){
+      historial[clave] = {
+        partidos: (val.partidos||[]).map(p => Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
+        resultados: val.resultados||[]
+      };
+    }
+  }
   return {
     partidos: (d.partidos||[]).map(p=> Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
     resultados: d.resultados||(d.partidos||[]).map(()=>null),
     publicado: d.publicado||false,
     jornada: d.jornada||1,
-    historial: d.historial||{}
+    historial
   };
 }
 

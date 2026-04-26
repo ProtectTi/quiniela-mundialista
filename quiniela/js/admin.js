@@ -26,17 +26,41 @@ const getEquipo=nombre=>EQUIPOS.find(e=>e.nombre===nombre)||null;
 
 // Firestore no soporta arrays anidados — convertimos antes de guardar/leer
 function cfgParaFirestore(c){
-  return {
+  const obj = {
     partidos: c.partidos.map(p=>({l:p[0], v:p[1]})),
     resultados: c.resultados,
-    publicado: c.publicado
+    publicado: c.publicado,
+    jornada: c.jornada||1,
   };
+  // Guardar historial convirtiendo partidos anidados
+  if(c.historial && Object.keys(c.historial).length > 0){
+    obj.historial = {};
+    for(const [clave, val] of Object.entries(c.historial)){
+      obj.historial[clave] = {
+        partidos: val.partidos.map(p => Array.isArray(p) ? {l:p[0],v:p[1]} : p),
+        resultados: val.resultados
+      };
+    }
+  }
+  return obj;
 }
+
 function cfgDesdeFirestore(d){
+  const historial = {};
+  if(d.historial){
+    for(const [clave, val] of Object.entries(d.historial)){
+      historial[clave] = {
+        partidos: (val.partidos||[]).map(p => Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
+        resultados: val.resultados||[]
+      };
+    }
+  }
   return {
-    partidos: d.partidos.map(p=> Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
-    resultados: d.resultados||new Array(d.partidos.length).fill(null),
-    publicado: d.publicado||false
+    partidos: (d.partidos||[]).map(p=> Array.isArray(p) ? p : [p.l||'Local', p.v||'Visitante']),
+    resultados: d.resultados||(d.partidos||[]).map(()=>null),
+    publicado: d.publicado||false,
+    jornada: d.jornada||1,
+    historial
   };
 }
 
