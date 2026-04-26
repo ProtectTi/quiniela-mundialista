@@ -698,3 +698,40 @@ tr:last-child td { border-bottom: none; }
   font-size: 12px;
   color: #7ab8f5;
 }
+
+/* ── SECCIONES POR JORNADA ── */
+.jornada-seccion {
+  margin-bottom: 16px;
+}
+.jornada-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--bg3);
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--borde);
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.jornada-titulo {
+  font-family: var(--ft);
+  font-size: 16px;
+  color: var(--am);
+  letter-spacing: 1px;
+}
+.jornada-pts {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vd);
+  background: var(--vd-bg);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.jornada-seccion .picks-lista {
+  border: 1px solid var(--borde);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px;
+  background: var(--bg2);
+}

@@ -177,19 +177,19 @@ async function renderMiQ(){
   const jug=snap.exists()?snap.data():null;
   const cont=document.getElementById('mq-contenido');
   showLoader(false);
-  if(jug&&jug.picks){
-    const{pts,pend,total:totalPartidos}=calcPtsTotales(jug);
-    const picksGuardados=jug.picks;
 
-    // Partidos ya pronosticados
-    const itemsGuardados=cfg.partidos.slice(0,picksGuardados.length).map(([l,v],i)=>{
-      const r=cfg.resultados[i];const ok=r!==null&&picksGuardados[i]===r;const mal=r!==null&&picksGuardados[i]!==r;
-      const elegido=picksGuardados[i]==='L'?l:picksGuardados[i]==='V'?v:null;
+  // Función para renderizar picks de una jornada
+  function renderPicksJornada(picksJ, partidosJ, resultadosJ, numJ, offset){
+    return partidosJ.map(([l,v],i)=>{
+      const r=resultadosJ[i];
+      const ok=r!==null&&picksJ[i]===r;
+      const mal=r!==null&&picksJ[i]!==r;
+      const elegido=picksJ[i]==='L'?l:picksJ[i]==='V'?v:null;
       const eq=elegido?getEquipo(elegido):null;
       const eqL=getEquipo(l);const eqV=getEquipo(v);
-      const resultadoColor=ok?'var(--vd)':mal?'#f88':'var(--tx2)';
+      const color=ok?'var(--vd)':mal?'#f88':'var(--tx2)';
       return `<div class="pr-card${ok?' pick-ok':mal?' pick-mal':''}">
-        <div class="pr-num">${i+1}</div>
+        <div class="pr-num">${offset+i+1}</div>
         <div class="pr-enfrentamiento">
           <div class="pr-equipo">${eqL?`<img src="${eqL.bandera}" alt="${l}">`:''}
             <span>${l}</span></div>
@@ -197,64 +197,130 @@ async function renderMiQ(){
           <div class="pr-equipo">${eqV?`<img src="${eqV.bandera}" alt="${v}">`:''}
             <span>${v}</span></div>
         </div>
-        <div class="pr-resultado" style="color:${resultadoColor}">
+        <div class="pr-resultado" style="color:${color}">
           ${eq?`<img src="${eq.bandera}" alt="${eq.nombre}">`:''}
-          <span>${picksGuardados[i]==='E'?'Empate':eq?eq.nombre:'-'}</span>
+          <span>${picksJ[i]==='E'?'Empate':eq?eq.nombre:'-'}</span>
           ${ok?'✓':mal?'✗':''}
         </div>
       </div>`;
     }).join('');
+  }
 
-    // Partidos nuevos que el admin agregó después
-    const partidosNuevos=cfg.partidos.slice(picksGuardados.length);
-    let seccionNuevos='';
-    if(partidosNuevos.length>0){
-      // Only reset picks if length changed (don't reset if user already selected some)
-      if(picks.length !== partidosNuevos.length) picks=new Array(partidosNuevos.length).fill(null);
-      const formNuevos=partidosNuevos.map(([l,v],ii)=>{
-        const i=picksGuardados.length+ii;
-        const eqL=getEquipo(l);const eqV=getEquipo(v);
-        return `<div class="q-partido-mundial">
-          <div class="q-partido-num-mundial">Partido ${i+1} — Nuevo</div>
-          <div class="q-partido-equipos">
-            <div class="q-equipo-lado">${eqL?`<img src="${eqL.bandera}" alt="${l}">`:''}
-              <span>${l}</span></div>
-            <span class="q-vs-badge">VS</span>
-            <div class="q-equipo-lado visitante">${eqV?`<img src="${eqV.bandera}" alt="${v}">`:''}
-              <span>${v}</span></div>
+  if(jug){
+    const{pts,pend,total:totalPartidos}=calcPtsTotales(jug);
+    const historial=cfg.historial||{};
+    const jornadaActual=cfg.jornada||1;
+    let seccionesHTML='';
+    let offsetPartidos=0;
+
+    // Mostrar jornadas anteriores (historial)
+    for(let j=1;j<jornadaActual;j++){
+      const picksJ=jug[`picksJ${j}`];
+      const histJ=historial[`jornada${j}`];
+      if(picksJ&&histJ){
+        const partJ=(histJ.partidos||[]).map(p=>Array.isArray(p)?p:[p.l,p.v]);
+        const resJ=histJ.resultados||[];
+        const ptsJ=resJ.filter((r,i)=>r!==null&&picksJ[i]===r).length;
+        const totalJ=partJ.length;
+        seccionesHTML+=`
+          <div class="jornada-seccion">
+            <div class="jornada-header">
+              <span class="jornada-titulo">Jornada ${j}</span>
+              <span class="jornada-pts">${ptsJ}/${totalJ} aciertos ✓</span>
+            </div>
+            <div class="picks-lista">${renderPicksJornada(picksJ,partJ,resJ,j,offsetPartidos)}</div>
+          </div>`;
+        offsetPartidos+=totalJ;
+      }
+    }
+
+    // Jornada actual
+    if(jug.picks){
+      const picksActual=jug.picks;
+      const partidosActual=cfg.partidos;
+      const resActual=cfg.resultados;
+      const ptsAct=resActual.filter((r,i)=>r!==null&&picksActual[i]===r).length;
+      seccionesHTML+=`
+        <div class="jornada-seccion">
+          <div class="jornada-header">
+            <span class="jornada-titulo">Jornada ${jornadaActual} — En curso</span>
+            <span class="jornada-pts">${ptsAct}/${partidosActual.length} aciertos</span>
           </div>
-          <div class="q-opciones-mundial">
-            <button id="pick-nuevo-${ii}-L" class="btn-pick-local${picks[ii]==='L'?' activo':''}" onclick="window.setPickNuevo(${ii},'L')">
-              ${eqL?`<img src="${eqL.bandera}" alt="">`:''}
-              <span>Gana ${l}</span>
-            </button>
-            <button id="pick-nuevo-${ii}-E" class="btn-pick-empate${picks[ii]==='E'?' activo':''}" onclick="window.setPickNuevo(${ii},'E')">E</button>
-            <button id="pick-nuevo-${ii}-V" class="btn-pick-visit${picks[ii]==='V'?' activo':''}" onclick="window.setPickNuevo(${ii},'V')">
-              ${eqV?`<img src="${eqV.bandera}" alt="">`:''}
-              <span>Gana ${v}</span>
-            </button>
-          </div>
+          <div class="picks-lista">${renderPicksJornada(picksActual,partidosActual,resActual,jornadaActual,offsetPartidos)}</div>
         </div>`;
-      }).join('');
-      seccionNuevos=`
+
+      // Partidos nuevos sin picks
+      const partidosNuevos=cfg.partidos.slice(picksActual.length);
+      if(partidosNuevos.length>0){
+        if(picks.length!==partidosNuevos.length) picks=new Array(partidosNuevos.length).fill(null);
+        const formNuevos=partidosNuevos.map(([l,v],ii)=>{
+          const eqL=getEquipo(l);const eqV=getEquipo(v);
+          return `<div class="q-partido-mundial">
+            <div class="q-partido-num-mundial">Partido ${offsetPartidos+picksActual.length+ii+1}</div>
+            <div class="q-partido-equipos">
+              <div class="q-equipo-lado">${eqL?`<img src="${eqL.bandera}" alt="${l}">`:''}
+                <span>${l}</span></div>
+              <span class="q-vs-badge">VS</span>
+              <div class="q-equipo-lado visitante">${eqV?`<img src="${eqV.bandera}" alt="${v}">`:''}
+                <span>${v}</span></div>
+            </div>
+            <div class="q-opciones-mundial">
+              <button id="pick-nuevo-${ii}-L" class="btn-pick-local${picks[ii]==='L'?' activo':''}" onclick="window.setPickNuevo(${ii},'L')">
+                ${eqL?`<img src="${eqL.bandera}" alt="">`:''}
+                <span>Gana ${l}</span>
+              </button>
+              <button id="pick-nuevo-${ii}-E" class="btn-pick-empate${picks[ii]==='E'?' activo':''}" onclick="window.setPickNuevo(${ii},'E')">E</button>
+              <button id="pick-nuevo-${ii}-V" class="btn-pick-visit${picks[ii]==='V'?' activo':''}" onclick="window.setPickNuevo(${ii},'V')">
+                ${eqV?`<img src="${eqV.bandera}" alt="">`:''}
+                <span>Gana ${v}</span>
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+        seccionesHTML+=`
+          <div class="nuevos-banner">
+            <div class="nuevos-t">⚽ Partidos sin pronosticar</div>
+            <div class="nuevos-s">${partidosNuevos.length} partido${partidosNuevos.length!==1?'s':''} nuevo${partidosNuevos.length!==1?'s':''} disponible${partidosNuevos.length!==1?'s':''}.</div>
+          </div>
+          <div id="form-nuevos">${formNuevos}</div>
+          <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <button class="btn-p" onclick="window.guardarPicksNuevos(${picksActual.length})">Guardar picks</button>
+            <span id="prog-nuevo-lbl" style="font-size:13px;color:var(--tx2);"></span>
+          </div>`;
+      }
+    } else {
+      // No tiene picks de jornada actual — mostrar formulario
+      picks=new Array(cfg.partidos.length).fill(null);
+      seccionesHTML+=`
         <div class="nuevos-banner">
-          <div class="nuevos-t">⚽ Nuevos partidos disponibles</div>
-          <div class="nuevos-s">El admin agregó ${partidosNuevos.length} partido${partidosNuevos.length!==1?'s':''} nuevo${partidosNuevos.length!==1?'s':''}. ¡Completa tu pronóstico!</div>
-        </div>
-        <div id="form-nuevos">${formNuevos}</div>
-        <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <button class="btn-p" onclick="window.guardarPicksNuevos(${picksGuardados.length})">Guardar nuevos picks</button>
-          <span id="prog-nuevo-lbl" style="font-size:13px;color:var(--tx2);"></span>
+          <div class="nuevos-t">⚽ Jornada ${jornadaActual} disponible</div>
+          <div class="nuevos-s">Llena tus ${cfg.partidos.length} pronósticos para la jornada ${jornadaActual}.</div>
         </div>`;
+      cont.innerHTML=`
+        <div class="mq-banner">
+          <div class="mq-t">Quiniela Mundialista 🔒</div>
+          <div class="mq-s">${pts} aciertos acumulados de ${totalPartidos} partidos</div>
+        </div>
+        ${seccionesHTML}
+        <div class="card card-p" style="margin-bottom:0;margin-top:14px;">
+          <div style="font-size:13px;color:var(--tx2);margin-bottom:14px;">Selecciona el equipo ganador o empate para cada partido</div>
+          <div id="q-form"></div>
+          <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <button class="btn-p" onclick="window.guardarPicks()">Guardar quiniela</button>
+            <span id="prog-lbl" style="font-size:13px;color:var(--tx2);"></span>
+          </div>
+          <div class="progreso-wrap"><div class="progreso-fill" id="prog-fill" style="width:0%"></div></div>
+        </div>`;
+      renderFormPicks();
+      return;
     }
 
     cont.innerHTML=`
       <div class="mq-banner">
-        <div class="mq-t">Quiniela registrada 🔒</div>
-        <div class="mq-s">${pts} aciertos de ${totalPartidos} partidos · ${pend} pendientes</div>
-        <div class="picks-lista">${itemsGuardados}</div>
+        <div class="mq-t">Quiniela Mundialista 🔒</div>
+        <div class="mq-s">Total: ${pts} aciertos de ${totalPartidos} partidos · ${pend} pendientes</div>
       </div>
-      ${seccionNuevos}`;
+      ${seccionesHTML}`;
   } else {
     picks=new Array(cfg.partidos.length).fill(null);
     cont.innerHTML=`<div class="card card-p" style="margin-bottom:0">
