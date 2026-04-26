@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, getDocs, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import EQUIPOS from "./equipos.js";
 
 const firebaseConfig = {
@@ -188,27 +188,25 @@ async function cargarRonda(num){
 
     await setDoc(configRef, cfgParaFirestore(cfg), { merge: true });
 
-    // 3. Resetear picks de jornada activa en jugadores
-    // pero guardar picks anteriores en picksJ1, picksJ2, etc.
+    // 3. Borrar TODOS los picks de todos los jugadores (limpio total)
     const snaps = await getDocs(jugadoresC);
     const updates = [];
     snaps.forEach(d => {
       const data = d.data();
-      const update = {};
-
-      if(num > 1 && data.picks) {
-        // Guardar picks anteriores
-        update[`picksJ${num-1}`] = data.picks;
+      // Construir objeto para borrar picks y todos los picksJ anteriores
+      const update = { picks: null };
+      // Borrar picksJ1, picksJ2, picksJ3 si existen
+      for(let j=1; j<=3; j++){
+        if(data[`picksJ${j}`] !== undefined){
+          update[`picksJ${j}`] = deleteField();
+        }
       }
-      // Resetear picks actuales para nueva jornada
-      update.picks = null;
-
       updates.push(updateDoc(doc(db,'jugadores',d.id), update));
     });
     await Promise.all(updates);
 
     renderPartidos();
-    mostrarAlerta('al-pt', `✓ Jornada ${num} cargada. Los jugadores pueden llenar sus nuevos picks.`, 'exito');
+    mostrarAlerta('al-pt', `✓ Jornada ${num} cargada. Todos los picks reseteados completamente.`, 'exito');
   } catch(e) {
     mostrarAlerta('al-pt', 'Error: ' + e.message, 'error');
     console.error(e);
