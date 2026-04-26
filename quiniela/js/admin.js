@@ -508,13 +508,21 @@ async function borrarJugador(id,nombre){
 }
 
 async function resetearQuiniela(id,nombre){
-  if(!confirm(`¿Resetear la quiniela de "${nombre}"? Su cuenta se mantiene pero sus picks se borran.`))return;
+  if(!confirm(`¿Resetear TODOS los picks de "${nombre}"?\nSe borrarán picks de todas las jornadas. Su cuenta se mantiene.`))return;
   try{
-    await updateDoc(doc(db,'jugadores',id),{picks:null});
-    mostrarAlerta('al-jug',`Quiniela de ${nombre} reseteada. Ya puede volver a llenarla.`,'exito');
+    const snap = await getDoc(doc(db,'jugadores',id));
+    if(!snap.exists()) return;
+    const data = snap.data();
+    // Borrar picks y todos los picksJ1, picksJ2, picksJ3...
+    const update = { picks: null };
+    Object.keys(data).forEach(k => {
+      if(k.startsWith('picksJ')) update[k] = deleteField();
+    });
+    await updateDoc(doc(db,'jugadores',id), update);
+    mostrarAlerta('al-jug',`Todos los picks de ${nombre} eliminados.`,'exito');
     renderJugadores();
   }catch(e){
-    mostrarAlerta('al-jug','Error al resetear.','error');
+    mostrarAlerta('al-jug','Error al resetear: '+e.message,'error');
   }
 }
 
