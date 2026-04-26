@@ -487,10 +487,11 @@ async function renderJugadores(){
     return `<tr class="fila-jug" onclick="${p.picks?'window.togPicks('+pi+')':''}">
       <td style="color:var(--tx3);font-size:12px;">${pi+1}</td>
       <td style="font-weight:500;">${p.nombre}</td>
-      <td>${p.picks?'<span style="color:var(--vd);font-size:12px;">✓ Registrada</span>':'<span class="sin-q">Sin quiniela</span>'}</td>
+      <td>${p.bloqueado?'<span style="color:var(--rj);font-size:12px;">🔒 Bloqueado</span>':p.picks?'<span style="color:var(--vd);font-size:12px;">✓ Registrada</span>':'<span class="sin-q">Sin quiniela</span>'}</td>
       <td>${p.picks?`<span class="pts-badge">${pts}/${total}</span>`:'—'}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${p.picks?`<button class="btn-reset-q" onclick="event.stopPropagation();window.resetearQuiniela('${p.id}','${p.nombre}')">Resetear picks</button>`:''}
+        <button class="btn-reset-q" onclick="event.stopPropagation();window.resetearQuiniela('${p.id}','${p.nombre}')">Resetear picks</button>
+        ${p.bloqueado?`<button class="btn-restablecer" onclick="event.stopPropagation();window.restablecerJornadas('${p.id}','${p.nombre}')">Restablecer</button>`:''}
         <button class="btn-del" onclick="event.stopPropagation();window.borrarJugador('${p.id}','${p.nombre}')">Borrar cuenta</button>
       </td>
     </tr>
@@ -508,21 +509,32 @@ async function borrarJugador(id,nombre){
 }
 
 async function resetearQuiniela(id,nombre){
-  if(!confirm(`¿Resetear TODOS los picks de "${nombre}"?\nSe borrarán picks de todas las jornadas. Su cuenta se mantiene.`))return;
+  if(!confirm(`¿Resetear TODOS los picks de "${nombre}"?\n\nEl jugador no podrá ver resultados ni jornadas anteriores hasta que uses "Restablecer jornadas".`))return;
   try{
     const snap = await getDoc(doc(db,'jugadores',id));
     if(!snap.exists()) return;
     const data = snap.data();
-    // Borrar picks y todos los picksJ1, picksJ2, picksJ3...
-    const update = { picks: null };
+    // Borrar picks, todos los picksJ y marcar como bloqueado
+    const update = { picks: null, bloqueado: true };
     Object.keys(data).forEach(k => {
       if(k.startsWith('picksJ')) update[k] = deleteField();
     });
     await updateDoc(doc(db,'jugadores',id), update);
-    mostrarAlerta('al-jug',`Todos los picks de ${nombre} eliminados.`,'exito');
+    mostrarAlerta('al-jug',`Picks de ${nombre} reseteados. El jugador está bloqueado.`,'exito');
     renderJugadores();
   }catch(e){
     mostrarAlerta('al-jug','Error al resetear: '+e.message,'error');
+  }
+}
+
+async function restablecerJornadas(id,nombre){
+  if(!confirm(`¿Restablecer acceso a jornadas para "${nombre}"?\n\nPodrá ver los resultados y llenar sus picks nuevamente.`))return;
+  try{
+    await updateDoc(doc(db,'jugadores',id),{ bloqueado: false, picks: null });
+    mostrarAlerta('al-jug',`Acceso restablecido para ${nombre}.`,'exito');
+    renderJugadores();
+  }catch(e){
+    mostrarAlerta('al-jug','Error: '+e.message,'error');
   }
 }
 
@@ -608,5 +620,5 @@ window.setPub=setPub;window.setRes=setRes;window.guardarPartidos=guardarPartidos
 window.agregarPartido=agregarPartido;window.quitarPartido=quitarPartido;
 window.filtrarEquipos=filtrarEquipos;window.mostrarDropdown=mostrarDropdown;window.enfocarEquipo=enfocarEquipo;
 window.ocultarDropdown=ocultarDropdown;window.elegirEquipo=elegirEquipo;
-window.togPicks=togPicks;window.borrarJugador=borrarJugador;window.resetearQuiniela=resetearQuiniela;
+window.togPicks=togPicks;window.borrarJugador=borrarJugador;window.resetearQuiniela=resetearQuiniela;window.restablecerJornadas=restablecerJornadas;
 window.cambiarPwd=cambiarPwd;window.resetearTodo=resetearTodo;

@@ -154,6 +154,20 @@ async function renderInicio(){
   const comp=cfg.resultados.filter(r=>r!==null).length;
   const snap=await getDoc(doc(db,'jugadores',sesion.nombre.toLowerCase()));
   const jug=snap.exists()?snap.data():null;
+
+  // Si el jugador está bloqueado, mostrar pantalla en blanco
+  if(jug&&jug.bloqueado){
+    document.getElementById('ini-sub').textContent='Tu quiniela ha sido reseteada por el administrador.';
+    document.getElementById('stats-ini').innerHTML='';
+    document.getElementById('ini-partidos').innerHTML=`
+      <div class="bloqueado">
+        <div style="font-size:36px;margin-bottom:10px;">🔒</div>
+        <div class="bloq-t">Acceso restringido</div>
+        <div class="bloq-s">El administrador ha reseteado tu quiniela.<br>Espera a que te restablezca el acceso.</div>
+      </div>`;
+    return;
+  }
+
   document.getElementById('ini-sub').textContent=jug&&jug.picks?'Tu quiniela está registrada ✓':'Aún no has llenado tu quiniela';
   const tot=cfg.partidos.length;
   document.getElementById('stats-ini').innerHTML=`
@@ -213,6 +227,17 @@ async function renderMiQ(){
         </div>
       </div>`;
     }).join('');
+  }
+
+  // Si el jugador está bloqueado, no mostrar nada
+  if(jug&&jug.bloqueado){
+    cont.innerHTML=`
+      <div class="bloqueado">
+        <div style="font-size:36px;margin-bottom:10px;">🔒</div>
+        <div class="bloq-t">Acceso restringido</div>
+        <div class="bloq-s">El administrador ha reseteado tu quiniela.<br>Espera a que te restablezca el acceso para poder llenarla nuevamente.</div>
+      </div>`;
+    return;
   }
 
   if(jug){
@@ -449,6 +474,12 @@ async function editarQ(){
 async function renderQuinielas(){
   if(!cfg)return;
   const cont=document.getElementById('cont-quinielas');
+  // Verificar si el jugador está bloqueado
+  const snapJug=await getDoc(doc(db,'jugadores',sesion.nombre.toLowerCase()));
+  if(snapJug.exists()&&snapJug.data().bloqueado){
+    cont.innerHTML=`<div class="bloqueado"><div style="font-size:36px;margin-bottom:10px;">🔒</div><div class="bloq-t">Acceso restringido</div><div class="bloq-s">El administrador ha reseteado tu quiniela.</div></div>`;
+    return;
+  }
   if(!cfg.publicado){
     cont.innerHTML=`<div class="bloqueado"><div style="font-size:36px;margin-bottom:10px;">🔒</div><div class="bloq-t">Quinielas ocultas</div><div class="bloq-s">El administrador publicará las quinielas cuando inicie la jornada.</div></div>`;
     return;

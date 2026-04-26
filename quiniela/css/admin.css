@@ -268,3 +268,19 @@ tr:last-child td { border-bottom:none; }
   white-space: nowrap;
 }
 .btn-reset-q:hover { opacity: 1; }
+
+/* ── RESTABLECER BTN ── */
+.btn-restablecer {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--vd);
+  background: transparent;
+  color: var(--vd);
+  cursor: pointer;
+  opacity: .8;
+  transition: opacity .12s;
+  font-family: var(--f);
+  white-space: nowrap;
+}
+.btn-restablecer:hover { opacity: 1; background: var(--vd-bg); }
