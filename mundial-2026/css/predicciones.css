@@ -1,0 +1,989 @@
+/* ══════════════════════════════════════════════════════
+   PREDICCIONES.CSS — Quiniela Mundialista 2026
+   Breakpoints:
+   0-350px     → Ultra compacto
+   351-500px   → Compacto
+   501-767px   → Hamburguesa normal
+   768-900px   → Navbar completo reducido
+   901-1050px  → Navbar completo reducido
+   1051px+     → Normal
+══════════════════════════════════════════════════════ */
+
+:root {
+  --gold:          #F5C518;
+  --gold-dark:     #d4a800;
+  --navbar-bg:     rgba(10, 10, 10, 0.92);
+  --card-bg:       rgba(10, 10, 10, 0.82);
+  --text-muted:    rgba(255,255,255,0.5);
+  --green-dark:    rgba(0, 40, 15, 0.98);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+  background: url('../img/cancha.png') center center / cover no-repeat fixed;
+  color: #fff;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 0;
+}
+
+/* ════════════════════════════════════════
+   NAVBAR
+════════════════════════════════════════ */
+.navbar-pred {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 60px;
+  background: var(--navbar-bg);
+  border-bottom: 1px solid rgba(245,197,24,0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+}
+
+.navbar-brand-area {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.navbar-logo {
+  height: 36px;
+  width: 36px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.navbar-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.navbar-title span.gold   { color: var(--gold); }
+.navbar-title span.mexico { color: #006847; }
+
+/* Nav tabs centro */
+.navbar-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.nav-tab-btn:hover  { color: #fff; background: rgba(255,255,255,0.08); }
+.nav-tab-btn.active { background: var(--gold); color: #000; box-shadow: 0 2px 10px rgba(245,197,24,0.3); }
+
+/* Usuario + Salir */
+.navbar-user-area {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.navbar-username {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.btn-salir {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--text-muted);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-salir:hover { border-color: #ce1126; color: #ff6b7a; }
+
+/* ── HAMBURGUESA ── */
+.btn-hamburguesa {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.btn-hamburguesa span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.btn-hamburguesa.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.btn-hamburguesa.open span:nth-child(2) { opacity: 0; }
+.btn-hamburguesa.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── MENÚ LATERAL MÓVIL ── */
+.menu-lateral {
+  display: none;
+  position: fixed;
+  top: 60px; left: 0; bottom: 0;
+  width: 220px;
+  background: rgba(8,8,8,0.97);
+  border-right: 1px solid rgba(245,197,24,0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 99;
+  padding: 1rem 0.75rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+.menu-lateral.open { transform: translateX(0); }
+.menu-lateral .nav-tab-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+}
+
+.menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  top: 60px;
+  background: rgba(0,0,0,0.5);
+  z-index: 98;
+}
+.menu-overlay.open { display: block; }
+
+/* ════════════════════════════════════════
+   CONTENIDO
+════════════════════════════════════════ */
+.pred-content {
+  position: relative;
+  z-index: 1;
+  padding-top: 80px;
+  min-height: 100vh;
+}
+
+.seccion {
+  display: none;
+  padding: 2rem 1.5rem;
+  animation: fadeUp 0.3s ease both;
+}
+.seccion.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD JUGADOR
+════════════════════════════════════════ */
+.bienvenido-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem;
+  letter-spacing: 2px;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.bienvenido-sub {
+  font-size: 0.85rem;
+  color: #6fe0a8;
+  margin-bottom: 1.5rem;
+}
+
+/* Stat cards */
+.stat-card {
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.stat-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+/* ── BANNERS JORNADAS FINALIZADAS ── */
+.banner-jornada-fin {
+  background: var(--green-dark);
+  border: 1px solid #006847;
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.banner-jornada-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+}
+.banner-jornada-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  color: #6fe0a8;
+}
+.banner-jornada-sub   { font-size: 0.78rem; color: var(--text-muted); flex: 1; }
+.banner-jornada-arrow { font-size: 0.75rem; color: var(--text-muted); }
+.banner-jornada-body  { padding: 0 1rem 1rem; border-top: 1px solid rgba(0,104,71,0.3); }
+.jornada-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(245,197,24,0.12);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+}
+
+.jornada-header {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  margin-bottom: 1.25rem;
+}
+
+.estado-row {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.4rem;
+  margin-bottom: 0.3rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.estado-row.con-resultado {
+  background: rgba(0,40,15,0.4);
+  border-color: rgba(0,104,71,0.3);
+}
+
+.estado-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.estado-tabla td { vertical-align: middle; padding: 0; }
+
+.estado-td-num   { width: 4%;  text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+.estado-td-local { width: 24%; text-align: center; }
+.estado-td-vs    { width: 5%;  text-align: center; font-size: 0.68rem; color: var(--text-muted); white-space: nowrap; }
+.estado-td-visit { width: 24%; text-align: center; }
+.estado-td-res   { width: 16%; text-align: center; }
+.estado-td-fecha { width: 27%; text-align: center; }
+
+.estado-td-local .inner,
+.estado-td-visit .inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+.estado-nombre {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estado-fecha-hora {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.estado-estadio {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.estado-resultado {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6fe0a8;
+  white-space: nowrap;
+}
+.estado-resultado.empate { color: var(--gold); }
+.estado-check { font-size: 0.7rem; }
+
+.estado-pendiente {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  display: block;
+}
+
+.bandera-sm {
+  width: 24px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.estado-res-nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Responsive estado partidos */
+@media (max-width: 900px) and (min-width: 768px) {
+  .estado-nombre     { display: none; }
+  .estado-res-nombre { display: none; }
+  .estado-td-local   { width: 12%; }
+  .estado-td-visit   { width: 12%; }
+  .estado-td-res     { width: 18%; }
+  .estado-td-fecha   { width: 43%; }
+  .estado-fecha-hora { font-size: 0.65rem; }
+  .estado-estadio    { font-size: 0.6rem; }
+  .bandera-sm        { width: 20px; height: 15px; }
+}
+
+@media (max-width: 767px) and (min-width: 501px) {
+  .estado-nombre     { display: none; }
+  .estado-res-nombre { display: none; }
+  .estado-td-local   { width: 12%; }
+  .estado-td-visit   { width: 12%; }
+  .estado-td-res     { width: 18%; }
+  .estado-td-fecha   { width: 35%; }
+  .estado-fecha-hora { font-size: 0.65rem; }
+  .estado-estadio    { font-size: 0.6rem; }
+  .bandera-sm        { width: 22px; height: 16px; }
+}
+
+@media (max-width: 500px) and (min-width: 351px) {
+  .estado-nombre     { display: none; }
+  .estado-res-nombre { display: none; }
+  .estado-td-local   { width: 10%; }
+  .estado-td-visit   { width: 10%; }
+  .estado-td-res     { width: 18%; }
+  .estado-td-fecha   { width: 38%; }
+  .estado-fecha-hora { font-size: 0.6rem; }
+  .estado-estadio    { font-size: 0.55rem; }
+  .bandera-sm        { width: 20px; height: 15px; }
+  .estado-resultado  { font-size: 0.65rem; }
+  .estado-pendiente  { font-size: 0.62rem; }
+}
+
+@media (max-width: 350px) {
+  .estado-nombre     { display: none; }
+  .estado-res-nombre { display: none; }
+  .estado-td-local   { width: 10%; }
+  .estado-td-visit   { width: 10%; }
+  .estado-td-res     { width: 18%; }
+  .estado-td-fecha   { width: 38%; }
+  .estado-fecha-hora { font-size: 0.55rem; }
+  .estado-estadio    { font-size: 0.5rem; }
+  .bandera-sm        { width: 18px; height: 13px; }
+  .estado-resultado  { font-size: 0.58rem; }
+  .estado-pendiente  { font-size: 0.55rem; }
+  .estado-td-vs      { font-size: 0.58rem; }
+}
+
+.btn-refrescar-pred {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-refrescar-pred:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ════════════════════════════════════════
+   MI QUINIELA
+════════════════════════════════════════ */
+.quiniela-banner {
+  background: var(--green-dark);
+  border: 1px solid #006847;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.quiniela-banner-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  color: #6fe0a8;
+  margin-bottom: 0.2rem;
+}
+
+.quiniela-banner-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Card de jornada */
+.jornada-picks-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(245,197,24,0.12);
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.jornada-picks-header {
+  background: var(--green-dark);
+  border-bottom: 1px solid #006847;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-height: 48px;
+}
+
+.jornada-picks-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  color: #6fe0a8;
+}
+
+.btn-modificar {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-modificar:hover { background: var(--gold); color: #000; }
+.btn-seleccion-auto {
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-seleccion-auto:hover { background: var(--gold); color: #000; }
+
+.jornada-picks-body {
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.3s ease;
+  max-height: 9999px;
+  opacity: 1;
+}
+
+.jornada-picks-body.contraido {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jornada-toggle-icon {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.jornada-aciertos-badge {
+  background: rgba(0,40,15,0.9);
+  border: 1px solid #006847;
+  color: #6fe0a8;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.3rem;
+  white-space: nowrap;
+}
+
+.jornada-picks-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.fecha-limite-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #ff6b7a;
+  background: rgba(220,53,69,0.15);
+  border: 1px solid rgba(220,53,69,0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.3rem;
+}
+
+.fecha-limite-badge.ok { color: #6fe0a8; background: rgba(0,104,71,0.15); border-color: rgba(0,104,71,0.3); }
+
+/* Partido picks */
+.partido-pick {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.partido-pick:last-child { border-bottom: none; }
+
+.partido-pick-num {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.partido-pick-equipos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.partido-pick-local {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.partido-pick-visit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.partido-pick-vs {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Botones de pick */
+.pick-btns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-pick {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.btn-pick .pick-nombre       { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-pick .pick-nombre-corto { display: none; }
+
+.btn-pick:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #fff; }
+.btn-pick.seleccionado.local   { background: #1a5276; border-color: #2e86c1; color: #fff; }
+.btn-pick.seleccionado.empate  { background: #7d6608; border-color: var(--gold); color: var(--gold); }
+.btn-pick.seleccionado.visita  { background: #1e8449; border-color: #27ae60; color: #fff; }
+.btn-pick:disabled             { opacity: 0.5; cursor: not-allowed; }
+
+/* ── VISTA COMPACTA PICKS ── */
+.pick-compacto {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.pick-compacto:last-child { border-bottom: none; }
+
+.pick-compacto-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.pick-compacto-tabla td { vertical-align: middle; padding: 0.2rem 0; }
+
+.pick-td-num   { width: 4%;  text-align: center; font-size: 0.72rem; color: var(--text-muted); }
+.pick-td-local { width: 22%; text-align: center; }
+.pick-td-vs    { width: 5%;  text-align: center; font-size: 0.68rem; color: var(--text-muted); }
+.pick-td-visit { width: 22%; text-align: center; }
+.pick-td-sel   { width: 20%; text-align: center; }
+.pick-td-fecha { width: 27%; text-align: center; }
+
+.pick-td-local .inner,
+.pick-td-visit .inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+.pick-compacto-nombre {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick-compacto-sel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  max-width: 100%;
+  min-height: 28px;
+}
+.pick-sel-nombre-corto { display: none; }
+.pick-compacto-sel.local  { background: #1a5276; border: 1px solid #2e86c1; color: #fff; }
+.pick-compacto-sel.empate { background: #7d6608; border: 1px solid var(--gold); color: var(--gold); }
+.pick-compacto-sel.visita { background: #1e8449; border: 1px solid #27ae60; color: #fff; }
+
+.pick-resultado { font-size: 0.82rem; font-weight: 800; margin-left: 0.2rem; flex-shrink: 0; }
+.pick-resultado.acerto { color: #6fe0a8; }
+.pick-resultado.fallo  { color: #ff6b7a; }
+
+/* Botón guardar quiniela */
+.btn-guardar-quiniela {
+  width: 100%;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.85rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1rem;
+}
+.btn-guardar-quiniela:hover    { background: var(--gold-dark); }
+.btn-guardar-quiniela:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.picks-msg {
+  margin-top: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: none;
+}
+.picks-msg.exito { background: rgba(25,135,84,0.2); border: 1px solid rgba(25,135,84,0.4); color: #6fe0a8; display: block; }
+.picks-msg.error { background: rgba(220,53,69,0.2); border: 1px solid rgba(220,53,69,0.4); color: #ff6b7a; display: block; }
+
+.picks-bloqueado {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Responsive Mi quiniela */
+@media (max-width: 1050px) and (min-width: 901px) {
+  .btn-pick             { font-size: 0.75rem; padding: 0.48rem 0.45rem; }
+  .partido-pick-equipos { font-size: 0.88rem; }
+}
+
+@media (max-width: 900px) and (min-width: 768px) {
+  .btn-pick             { font-size: 0.72rem; padding: 0.45rem 0.4rem; }
+  .partido-pick-equipos { font-size: 0.82rem; }
+  .partido-pick         { padding: 0.75rem 1rem; }
+}
+
+@media (max-width: 767px) and (min-width: 501px) {
+  .btn-pick             { font-size: 0.68rem; padding: 0.42rem 0.35rem; gap: 0.2rem; }
+  .partido-pick         { padding: 0.7rem 0.85rem; }
+  .partido-pick-equipos { font-size: 0.78rem; gap: 0.5rem; }
+  .jornada-picks-header { padding: 0.65rem 1rem; }
+  .jornada-picks-sub    { flex-direction: column; align-items: center; text-align: center; }
+  .jornada-picks-titulo { font-size: 0.9rem; }
+  .btn-seleccion-auto   { font-size: 0.72rem; padding: 0.3rem 0.7rem; }
+  .btn-guardar-quiniela { font-size: 0.9rem; padding: 0.75rem; }
+  .pick-compacto-nombre { display: none; }
+  .pick-sel-nombre      { display: none; }
+  .pick-td-local        { width: 10%; }
+  .pick-td-visit        { width: 10%; }
+  .pick-td-sel          { width: 25%; }
+  .pick-td-fecha        { width: 40%; }
+  .pick-compacto-sel    { font-size: 0.68rem; }
+}
+
+@media (max-width: 500px) and (min-width: 351px) {
+  .btn-pick             { font-size: 0.65rem; padding: 0.4rem 0.25rem; gap: 0.15rem; }
+  .btn-pick .pick-nombre { display: none; }
+  .btn-pick .pick-nombre-corto { display: inline; }
+  .partido-pick         { padding: 0.65rem 0.75rem; }
+  .partido-pick-equipos { font-size: 0.75rem; gap: 0.4rem; }
+  .jornada-picks-header { padding: 0.6rem 0.85rem; }
+  .jornada-picks-sub    { flex-direction: column; align-items: center; text-align: center; }
+  .jornada-picks-titulo { font-size: 0.85rem; }
+  .btn-seleccion-auto   { font-size: 0.68rem; padding: 0.28rem 0.6rem; }
+  .btn-guardar-quiniela { font-size: 0.85rem; padding: 0.7rem; }
+  .picks-msg            { font-size: 0.78rem; }
+  .fecha-limite-badge   { font-size: 0.65rem; }
+  .quiniela-banner      { padding: 0.85rem 1rem; }
+  .pick-compacto        { padding: 0.45rem 0.75rem; }
+  .pick-compacto-nombre { display: none; }
+  .pick-sel-nombre      { display: none; }
+  .pick-compacto-sel    { font-size: 0.62rem; padding: 0.18rem 0.4rem; }
+  .pick-td-local        { width: 10%; }
+  .pick-td-visit        { width: 10%; }
+  .pick-td-sel          { width: 25%; }
+  .pick-td-fecha        { width: 40%; }
+}
+
+@media (max-width: 350px) {
+  .btn-pick             { font-size: 0.58rem; padding: 0.35rem 0.2rem; gap: 0.1rem; }
+  .btn-pick .pick-nombre { display: none; }
+  .btn-pick .pick-nombre-corto { display: inline; }
+  .partido-pick         { padding: 0.55rem 0.65rem; }
+  .partido-pick-equipos { font-size: 0.65rem; gap: 0.3rem; }
+  .partido-pick-num     { font-size: 0.6rem; }
+  .jornada-picks-header { padding: 0.5rem 0.75rem; }
+  .jornada-picks-sub    { flex-direction: column; align-items: center; text-align: center; }
+  .jornada-picks-titulo { font-size: 0.78rem; letter-spacing: 1px; }
+  .btn-seleccion-auto   { font-size: 0.6rem; padding: 0.25rem 0.5rem; }
+  .btn-guardar-quiniela { font-size: 0.78rem; padding: 0.62rem; }
+  .picks-msg            { font-size: 0.68rem; }
+  .fecha-limite-badge   { font-size: 0.58rem; }
+  .quiniela-banner      { padding: 0.75rem 0.85rem; }
+  .quiniela-banner-titulo { font-size: 0.88rem; }
+  .pick-compacto        { padding: 0.38rem 0.6rem; }
+  .pick-compacto-nombre { display: none; }
+  .pick-sel-nombre      { display: none; }
+  .pick-compacto-sel    { font-size: 0.55rem; padding: 0.15rem 0.3rem; }
+  .pick-td-local        { width: 10%; }
+  .pick-td-visit        { width: 10%; }
+  .pick-td-sel          { width: 22%; }
+  .pick-td-fecha        { width: 42%; }
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════ */
+
+/* 901px - 1050px */
+@media (max-width: 1050px) and (min-width: 901px) {
+  .navbar-pred   { padding: 0 1rem; gap: 0.5rem; }
+  .navbar-title  { font-size: 1.05rem; }
+  .navbar-logo   { height: 30px; width: 30px; }
+  .nav-tab-btn   { font-size: 0.75rem; padding: 0.38rem 0.6rem; }
+  .btn-salir     { font-size: 0.72rem; padding: 0.35rem 0.65rem; }
+  .navbar-username { font-size: 0.78rem; }
+}
+
+/* 768px - 900px */
+@media (max-width: 900px) and (min-width: 768px) {
+  .navbar-pred   { padding: 0 0.75rem; gap: 0.4rem; }
+  .navbar-title  { font-size: 0.95rem; }
+  .navbar-logo   { height: 28px; width: 28px; }
+  .nav-tab-btn   { font-size: 0.68rem; padding: 0.32rem 0.5rem; }
+  .btn-salir     { font-size: 0.65rem; padding: 0.3rem 0.55rem; }
+  .navbar-username { font-size: 0.72rem; }
+  .stat-number   { font-size: 2.5rem; }
+  .bandera-sm    { width: 20px; height: 15px; }
+}
+
+/* 501px - 767px → Hamburguesa */
+@media (max-width: 767px) and (min-width: 501px) {
+  .navbar-pred   { padding: 0 1rem; justify-content: space-between; height: 58px; }
+  .btn-hamburguesa { display: flex; }
+  .navbar-nav-tabs { display: none; }
+  .navbar-user-area { display: none; }
+  .menu-lateral  { display: flex; top: 58px; }
+  .menu-overlay  { top: 58px; }
+  .navbar-brand-area { position: absolute; left: 50%; transform: translateX(-50%); }
+  .navbar-title  { font-size: 1.1rem; }
+  .navbar-logo   { height: 30px; width: 30px; }
+
+  .pred-content  { padding-top: 75px; }
+  .seccion       { padding: 1.5rem 1rem; }
+
+  .bienvenido-title { font-size: 2rem; }
+  .stat-number   { font-size: 2.2rem; }
+  .stat-card     { padding: 1.1rem; }
+  .stat-label    { font-size: 0.7rem; letter-spacing: 0.5px; }
+
+  .estado-nombre   { display: none; }
+  .estado-td-local { width: 10%; }
+  .estado-td-visit { width: 10%; }
+  .estado-td-res   { width: 18%; }
+  .estado-td-fecha { width: 43%; }
+  .bandera-sm      { width: 22px; height: 16px; }
+  .estado-fecha-hora { font-size: 0.65rem; }
+  .estado-estadio    { font-size: 0.58rem; }
+}
+
+/* 351px - 500px */
+@media (max-width: 500px) and (min-width: 351px) {
+  .navbar-pred   { padding: 0 0.75rem; justify-content: space-between; height: 54px; }
+  .btn-hamburguesa { display: flex; gap: 4px; }
+  .btn-hamburguesa span { width: 20px; }
+  .btn-hamburguesa.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .btn-hamburguesa.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .navbar-nav-tabs { display: none; }
+  .navbar-user-area { display: none; }
+  .menu-lateral  { display: flex; top: 54px; width: 200px; padding: 0.85rem 0.6rem; }
+  .menu-lateral .nav-tab-btn { font-size: 0.8rem; padding: 0.55rem 0.85rem; }
+  .menu-overlay  { top: 54px; }
+  .navbar-brand-area { position: absolute; left: 50%; transform: translateX(-50%); }
+  .navbar-title  { font-size: 0.9rem; letter-spacing: 0.8px; }
+  .navbar-logo   { height: 26px; width: 26px; }
+
+  .pred-content  { padding-top: 70px; }
+  .seccion       { padding: 1.25rem 0.75rem; }
+
+  .bienvenido-title { font-size: 1.8rem; }
+  .stat-number   { font-size: 1.8rem; }
+  .stat-card     { padding: 0.85rem 0.5rem; }
+  .stat-label    { font-size: 0.62rem; letter-spacing: 0.3px; }
+
+  .estado-nombre   { display: none; }
+  .estado-td-num   { width: 5%; }
+  .estado-td-local { width: 10%; }
+  .estado-td-vs    { width: 6%; }
+  .estado-td-visit { width: 10%; }
+  .estado-td-res   { width: 18%; }
+  .estado-td-fecha { width: 51%; }
+  .bandera-sm      { width: 20px; height: 15px; }
+  .estado-fecha-hora { font-size: 0.6rem; }
+  .estado-estadio    { font-size: 0.55rem; }
+  .pred-badge      { font-size: 0.62rem; padding: 0.18rem 0.38rem; }
+}
+
+/* 0px - 350px */
+@media (max-width: 350px) {
+  .navbar-pred   { padding: 0 0.5rem; justify-content: space-between; height: 50px; }
+  .btn-hamburguesa { display: flex; gap: 3px; }
+  .btn-hamburguesa span { width: 16px; height: 2px; }
+  .btn-hamburguesa.open span:nth-child(1) { transform: translateY(5px) rotate(45deg); }
+  .btn-hamburguesa.open span:nth-child(3) { transform: translateY(-5px) rotate(-45deg); }
+  .navbar-nav-tabs { display: none; }
+  .navbar-user-area { display: none; }
+  .menu-lateral  { display: flex; top: 50px; width: 175px; padding: 0.7rem 0.5rem; }
+  .menu-lateral .nav-tab-btn { font-size: 0.7rem; padding: 0.45rem 0.7rem; }
+  .menu-overlay  { top: 50px; }
+  .navbar-brand-area { position: absolute; left: 50%; transform: translateX(-50%); }
+  .navbar-title  { font-size: 0.72rem; letter-spacing: 0.5px; }
+  .navbar-logo   { height: 22px; width: 22px; }
+
+  .pred-content  { padding-top: 65px; }
+  .seccion       { padding: 1rem 0.5rem; }
+
+  .bienvenido-title { font-size: 1.5rem; }
+  .stat-number   { font-size: 1.6rem; }
+  .stat-card     { padding: 0.65rem 0.35rem; }
+  .stat-label    { font-size: 0.55rem; letter-spacing: 0px; }
+
+  .estado-nombre   { display: none; }
+  .estado-td-num   { width: 5%; }
+  .estado-td-local { width: 10%; }
+  .estado-td-vs    { width: 6%; font-size: 0.58rem; }
+  .estado-td-visit { width: 10%; }
+  .estado-td-res   { width: 18%; }
+  .estado-td-fecha { width: 51%; }
+  .bandera-sm      { width: 18px; height: 13px; }
+  .estado-fecha-hora { font-size: 0.55rem; }
+  .estado-estadio    { font-size: 0.5rem; }
+  .pred-badge      { font-size: 0.55rem; padding: 0.15rem 0.3rem; }
+}
