@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <!-- Estilos propios -->
   <link rel="stylesheet" href="css/panel.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="img/logo.png" />
 </head>
 <body>
 
@@ -179,9 +181,16 @@
 
         <div class="panel-card">
           <!-- Header tabla -->
-          <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-            <span class="jugadores-count" id="jugadores-count">0 JUGADORES</span>
-            <button class="btn-refrescar" onclick="cargarJugadores()">🔄 Actualizar</button>
+          <div class="admin-section-status mb-3">
+            <div class="admin-status-item">
+              <span class="admin-status-label">Jugadores</span>
+              <strong id="jugadores-count">0</strong>
+            </div>
+
+            <div class="admin-status-live">
+            <span class="live-dot"></span>
+            En tiempo real
+            </div>
           </div>
 
           <!-- Tabla Bootstrap responsive -->
@@ -220,7 +229,7 @@
         <div class="panel-card">
           <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <span class="jugadores-count" id="posiciones-count">0 JUGADORES</span>
-            <button class="btn-refrescar" onclick="cargarPosiciones()">🔄 Actualizar</button>
+            <span class="jugadores-count" style="font-size:0.72rem; color:var(--text-muted);">EN TIEMPO REAL</span>
           </div>
 
           <div class="table-responsive">
@@ -230,7 +239,7 @@
                   <th scope="col">#</th>
                   <th scope="col">Jugador</th>
                   <th scope="col">Aciertos</th>
-                  <th scope="col">Pendientes</th>
+                  <th scope="col">Porcentaje</th>
                   <th scope="col">Progreso</th>
                 </tr>
               </thead>
@@ -254,8 +263,16 @@
         <h2 class="dashboard-title">Tabla de Grupos</h2>
         <p class="dashboard-sub">Posiciones calculadas automáticamente con los resultados registrados</p>
 
-        <div class="d-flex justify-content-end mb-3">
-          <button class="btn-refrescar" onclick="cargarGrupos()">🔄 Actualizar</button>
+        <div class="admin-section-status mb-3">
+          <div class="admin-status-item">
+            <span class="admin-status-label">Grupos</span>
+            <strong>En vivo</strong>
+          </div>
+
+          <div class="admin-status-live">
+            <span class="live-dot"></span>
+            En tiempo real
+          </div>
         </div>
 
         <div id="grupos-contenedor">
@@ -275,16 +292,20 @@
         <div class="panel-card mb-3">
           <h6 class="config-card-title">Cambiar contraseña de admin</h6>
           <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-5">
+            <div class="col-12 col-md-4">
+              <label class="config-label">Contraseña actual</label>
+              <input type="password" class="config-input" id="cfg-pass-actual" placeholder="Contraseña actual" maxlength="30" />
+            </div>
+            <div class="col-12 col-md-4">
               <label class="config-label">Nueva contraseña</label>
               <input type="password" class="config-input" id="cfg-pass1" placeholder="Mínimo 4 caracteres" maxlength="30" />
             </div>
-            <div class="col-12 col-md-5">
-              <label class="config-label">Confirmar</label>
+            <div class="col-12 col-md-4">
+              <label class="config-label">Confirmar nueva</label>
               <input type="password" class="config-input" id="cfg-pass2" placeholder="Repite la contraseña" maxlength="30" />
             </div>
-            <div class="col-12 col-md-2">
-              <button class="btn-gold-config w-100" onclick="cambiarPassword()">Guardar</button>
+            <div class="col-12">
+              <button class="btn-gold-config" onclick="cambiarPassword()">Guardar contraseña</button>
             </div>
           </div>
           <div class="reset-msg mt-2" id="cfg-pass-msg" style="display:none;"></div>
@@ -446,5 +467,13 @@
   <script src="js/partidos.js"></script>
   <script type="module" src="js/panel.js"></script>
 
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

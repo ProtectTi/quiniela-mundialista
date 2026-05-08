@@ -1,19 +1,65 @@
-import { initializeApp }                    from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc,
-         query, where, getDocs }            from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+import {
+  collection,
+  doc,
+  query,
+  where,
+  getDocs,
+  runTransaction,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
-// ── CONFIG FIREBASE ──
-const firebaseConfig = {
-  apiKey:            "AIzaSyBkOqWfEpPNDun1jHJNV0g1creQAUCdgMo",
-  authDomain:        "quiniela-mundialista-202-bff2f.firebaseapp.com",
-  projectId:         "quiniela-mundialista-202-bff2f",
-  storageBucket:     "quiniela-mundialista-202-bff2f.firebasestorage.app",
-  messagingSenderId: "366645558738",
-  appId:             "1:366645558738:web:82c13047ea5151f6f2dc0b"
-};
+import { db } from "./firebase/config.js";
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+// ── PROTECCIÓN ANTI-BRUTE FORCE ──
+const MAX_INTENTOS   = 5;
+const BLOQUEO_MS     = 5 * 60 * 1000; // 5 minutos
+
+function getIntentosData() {
+  try {
+    return JSON.parse(localStorage.getItem('login_intentos') || '{"count":0,"hasta":0}');
+  } catch { return { count: 0, hasta: 0 }; }
+}
+
+function registrarIntentoFallido() {
+  const data = getIntentosData();
+  data.count++;
+  if (data.count >= MAX_INTENTOS) {
+    data.hasta = Date.now() + BLOQUEO_MS;
+  }
+  localStorage.setItem('login_intentos', JSON.stringify(data));
+}
+
+function limpiarIntentos() {
+  localStorage.removeItem('login_intentos');
+}
+
+function verificarBloqueo() {
+  const data = getIntentosData();
+  if (data.count >= MAX_INTENTOS) {
+    const restante = data.hasta - Date.now();
+    if (restante > 0) {
+      const mins = Math.ceil(restante / 60000);
+      return `Demasiados intentos fallidos. Espera ${mins} minuto${mins > 1 ? 's' : ''} e intenta de nuevo.`;
+    } else {
+      // Tiempo de bloqueo cumplido, resetear
+      limpiarIntentos();
+    }
+  }
+  return null;
+}
+
+
+
+// ── HASH CONTRASEÑA (SHA-256) ──
+async function hashPassword(pass) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pass);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+
 
 // ── HELPERS ──
 function showAlert(msg, tipo) {
@@ -37,9 +83,12 @@ function setLoading(btnId, loading) {
 // ── SWITCH TAB ──
 window.switchTab = function(tab) {
   hideAlert();
+
   const isRegister = tab === 'register';
+
   document.getElementById('form-register').style.display = isRegister ? 'block' : 'none';
   document.getElementById('form-login').style.display    = isRegister ? 'none'  : 'block';
+
   document.getElementById('tab-register').classList.toggle('active', isRegister);
   document.getElementById('tab-login').classList.toggle('active', !isRegister);
 };
@@ -50,41 +99,66 @@ window.registrar = async function() {
   const pass   = document.getElementById('reg-pass').value;
   const pass2  = document.getElementById('reg-pass2').value;
 
-  if (!nombre)         return showAlert('Por favor ingresa tu nombre.', 'error');
-  if (pass.length < 4) return showAlert('La contraseña debe tener al menos 4 caracteres.', 'error');
-  if (pass !== pass2)  return showAlert('Las contraseñas no coinciden.', 'error');
+  if (!nombre)
+    return showAlert('Por favor ingresa tu nombre.', 'error');
+
+  if (!/^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s\-\.]+$/.test(nombre))
+    return showAlert('El nombre solo puede contener letras, espacios, guiones y puntos.', 'error');
+
+  if (nombre.length < 2)
+    return showAlert('El nombre debe tener al menos 2 caracteres.', 'error');
+
+  if (pass.length < 4)
+    return showAlert('La contraseña debe tener al menos 4 caracteres.', 'error');
+
+  if (pass !== pass2)
+    return showAlert('Las contraseñas no coinciden.', 'error');
 
   setLoading('btn-register', true);
   hideAlert();
 
   try {
-    // Verificar si el nombre ya existe
-    const q    = query(collection(db, 'jugadores'), where('nombreKey', '==', nombre.toLowerCase()));
-    const snap = await getDocs(q);
+    // ── REGISTRAR CON TRANSACCIÓN (evita duplicados por race condition) ──
+    const passHash  = await hashPassword(pass);
+    const nombreKey = nombre.toLowerCase();
+    const nuevoDoc  = doc(collection(db, 'jugadores'));
 
-    if (!snap.empty) {
-      showAlert('Ese nombre ya está registrado. Elige otro.', 'error');
-      setLoading('btn-register', false);
-      return;
-    }
+    await runTransaction(db, async (tx) => {
+      const q    = query(collection(db, 'jugadores'), where('nombreKey', '==', nombreKey));
+      const snap = await getDocs(q);
 
-    // Guardar jugador en Firestore
-    await addDoc(collection(db, 'jugadores'), {
-      nombre:    nombre,
-      nombreKey: nombre.toLowerCase(),
-      password:  pass,
-      creadoEn:  new Date()
+      if (!snap.empty) throw { code: 'nombre_tomado' };
+
+      tx.set(nuevoDoc, {
+        nombre,
+        nombreKey,
+        password: passHash,
+        creadoEn: serverTimestamp()
+      });
     });
 
-    // Guardar sesión local
-    localStorage.setItem('jugador', JSON.stringify({ nombre }));
+    // ── GUARDAR SESIÓN ──
+    localStorage.setItem(
+      'jugador',
+      JSON.stringify({
+        id: nuevoDoc.id,
+        nombre: nombre
+      })
+    );
 
     showAlert(`¡Bienvenido, ${nombre}! Redirigiendo...`, 'success');
-    setTimeout(() => window.location.href = 'predicciones.html', 1500);
+
+    setTimeout(() => {
+      window.location.href = 'predicciones.html';
+    }, 1500);
 
   } catch (e) {
     console.error(e);
-    showAlert('Error al registrar. Intenta de nuevo.', 'error');
+    if (e?.code === 'nombre_tomado') {
+      showAlert('Ese nombre ya está registrado. Elige otro.', 'error');
+    } else {
+      showAlert('Error al registrar. Intenta de nuevo.', 'error');
+    }
     setLoading('btn-register', false);
   }
 };
@@ -94,31 +168,59 @@ window.iniciarSesion = async function() {
   const nombre = document.getElementById('login-nombre').value.trim();
   const pass   = document.getElementById('login-pass').value;
 
-  if (!nombre) return showAlert('Por favor ingresa tu nombre.', 'error');
-  if (!pass)   return showAlert('Por favor ingresa tu contraseña.', 'error');
+  // Verificar bloqueo por intentos fallidos
+  const mensajeBloqueo = verificarBloqueo();
+  if (mensajeBloqueo) return showAlert(mensajeBloqueo, 'error');
+
+  if (!nombre)
+    return showAlert('Por favor ingresa tu nombre.', 'error');
+
+  if (!/^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s\-\.]+$/.test(nombre))
+    return showAlert('Nombre inválido. Revisa que no tenga caracteres especiales.', 'error');
+
+  if (!pass)
+    return showAlert('Por favor ingresa tu contraseña.', 'error');
 
   setLoading('btn-login', true);
   hideAlert();
 
   try {
+    const passHash = await hashPassword(pass);
+
     const q = query(
       collection(db, 'jugadores'),
       where('nombreKey', '==', nombre.toLowerCase()),
-      where('password',  '==', pass)
+      where('password',  '==', passHash)
     );
+
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      showAlert('Nombre o contraseña incorrectos.', 'error');
+      registrarIntentoFallido();
+      const data = getIntentosData();
+      const restantes = Math.max(0, MAX_INTENTOS - data.count);
+      const msgExtra = restantes > 0 ? ` (${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''})` : ' — Bloqueado por 5 min';
+      showAlert('Nombre o contraseña incorrectos.' + msgExtra, 'error');
       setLoading('btn-login', false);
       return;
     }
 
     const jugador = snap.docs[0].data();
-    localStorage.setItem('jugador', JSON.stringify({ nombre: jugador.nombre, id: snap.docs[0].id }));
 
+    localStorage.setItem(
+      'jugador',
+      JSON.stringify({
+        id: snap.docs[0].id,
+        nombre: jugador.nombre
+      })
+    );
+
+    limpiarIntentos();
     showAlert(`¡Hola de nuevo, ${jugador.nombre}! Redirigiendo...`, 'success');
-    setTimeout(() => window.location.href = 'predicciones.html', 1500);
+
+    setTimeout(() => {
+      window.location.href = 'predicciones.html';
+    }, 1500);
 
   } catch (e) {
     console.error(e);
@@ -130,8 +232,12 @@ window.iniciarSesion = async function() {
 // ── ENTER para enviar ──
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
+
   const loginVisible = document.getElementById('form-login').style.display !== 'none';
-  loginVisible ? window.iniciarSesion() : window.registrar();
+
+  loginVisible
+    ? window.iniciarSesion()
+    : window.registrar();
 });
 
 // ── Labels originales de botones ──

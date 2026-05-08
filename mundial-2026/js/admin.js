@@ -1,5 +1,13 @@
-// ── CONTRASEÑA ADMIN ──
-const ADMIN_PASSWORD = 'admin123';
+import {
+  signInWithEmailAndPassword,
+  setPersistence,
+  browserSessionPersistence
+} from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+
+import { auth } from "./firebase/config.js";
+
+// Admin creado en Firebase Authentication
+const ADMIN_EMAIL = "admin@quiniela.com";
 
 // ── HELPERS ──
 function showAlert(msg, tipo) {
@@ -20,25 +28,34 @@ function setLoading(loading) {
     : 'Entrar al panel';
 }
 
-// ── LOGIN ADMIN ──
-window.entrarPanel = function() {
+// ── LOGIN ADMIN CON FIREBASE AUTH ──
+window.entrarPanel = async function() {
   const pass = document.getElementById('admin-pass').value;
 
-  if (!pass) return showAlert('Por favor ingresa la contraseña.', 'error');
+  if (!pass) {
+    return showAlert('Por favor ingresa la contraseña.', 'error');
+  }
 
   setLoading(true);
   hideAlert();
 
-  setTimeout(() => {
-    if (pass === ADMIN_PASSWORD) {
-      sessionStorage.setItem('adminAuth', 'true');
-      showAlert('¡Acceso concedido! Redirigiendo...', 'success');
-      setTimeout(() => window.location.href = 'panel.html', 1500);
-    } else {
-      showAlert('Contraseña incorrecta.', 'error');
-      setLoading(false);
-    }
-  }, 800);
+  try {
+    await setPersistence(auth, browserSessionPersistence);
+
+    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, pass);
+
+    showAlert('¡Acceso concedido! Redirigiendo...', 'success');
+
+    setTimeout(() => {
+      window.location.href = 'panel.html';
+    }, 1200);
+
+  } catch (error) {
+    console.error(error);
+
+    showAlert('Correo o contraseña incorrectos.', 'error');
+    setLoading(false);
+  }
 };
 
 // ── ENTER para enviar ──

@@ -1395,3 +1395,210 @@ body::before {
   .estado-pendiente { font-size: 0.58rem; }
   .estado-resultado { font-size: 0.6rem; gap: 0.2rem; }
 }
+
+.admin-section-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(245,197,24,0.14);
+  border-radius: 0.85rem;
+
+  padding: 0.85rem 1rem;
+}
+
+.admin-status-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.admin-status-label {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.admin-status-item strong {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1.6rem;
+  letter-spacing: 1.5px;
+  line-height: 1;
+}
+
+.admin-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  color: #6fe0a8;
+  background: rgba(0,104,71,0.18);
+  border: 1px solid rgba(0,104,71,0.65);
+  border-radius: 999px;
+
+  padding: 0.4rem 0.75rem;
+
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: #6fe0a8;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(111,224,168,0.75);
+}
+
+@media (max-width: 500px) {
+  .admin-section-status {
+    padding: 0.75rem;
+  }
+
+  .admin-status-item strong {
+    font-size: 1.4rem;
+  }
+
+  .admin-status-live {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.6rem;
+  }
+}
+
+/* ════════════════════════════════════════
+   TRANSICIÓN SUAVE ENTRE SECCIONES
+════════════════════════════════════════ */
+.seccion {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.seccion.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ════════════════════════════════════════
+   MICROINTERACCIONES
+════════════════════════════════════════ */
+
+/* BOTONES */
+button,
+.btn,
+.btn-guardar,
+.btn-modificar,
+.btn-auto,
+.btn-refrescar,
+.btn-eliminar,
+.btn-publicar {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+button:hover,
+.btn:hover,
+.btn-guardar:hover,
+.btn-modificar:hover,
+.btn-auto:hover,
+.btn-refrescar:hover,
+.btn-eliminar:hover,
+.btn-publicar:hover {
+  transform: translateY(-1px);
+}
+
+button:active,
+.btn:active,
+.btn-guardar:active,
+.btn-modificar:active,
+.btn-auto:active,
+.btn-refrescar:active,
+.btn-eliminar:active,
+.btn-publicar:active {
+  transform: scale(0.97);
+}
+
+/* CARDS */
+.card,
+.dashboard-card,
+.posicion-card,
+.quiniela-card,
+.grupo-card,
+.partido-card,
+.partido-pick {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.card:hover,
+.dashboard-card:hover,
+.posicion-card:hover,
+.quiniela-card:hover,
+.grupo-card:hover,
+.partido-card:hover,
+.partido-pick:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.28),
+    0 0 0 1px rgba(245,197,24,0.08);
+}
+
+/* BADGES */
+.badge,
+.grupo-pts,
+.estado-badge,
+.admin-status-live {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.badge:hover,
+.grupo-pts:hover,
+.estado-badge:hover,
+.admin-status-live:hover {
+  transform: scale(1.03);
+}
+
+/* FILAS TABLAS */
+table tbody tr {
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+table tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+/* PICKS */
+.pick-btn {
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.pick-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pick-btn:active {
+  transform: scale(0.95);
+}
