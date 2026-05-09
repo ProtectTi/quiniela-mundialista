@@ -4,7 +4,7 @@
 // Solo cachea assets estáticos (HTML, CSS, JS, imágenes)
 // ══════════════════════════════════════
 
-const CACHE_NAME = 'quiniela-2026-v4';
+const CACHE_NAME = 'quiniela-2026-v5';
 
 const ASSETS_TO_CACHE = [
   './jugador.html',
@@ -64,7 +64,8 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('gstatic.com') ||
     url.hostname.includes('flagcdn.com') ||
     url.hostname.includes('jsdelivr.net') ||
-    url.hostname.includes('fonts.googleapis.com')
+    url.hostname.includes('fonts.googleapis.com') ||
+    url.hostname.includes('fonts.gstatic.com')
   ) return;
 
   event.respondWith(
