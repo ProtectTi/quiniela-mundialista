@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── JUGADORES ──
+    // Cualquiera puede crear (registro público)
+    // Cualquiera puede leer (necesario para login por nombre+password)
+    // Solo Firebase Auth (admin) puede eliminar o editar
+    match /jugadores/{jugadorId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll([
+                      'nombre', 'nombreKey', 'password', 'creadoEn'
+                    ])
+                    && request.resource.data.nombre is string
+                    && request.resource.data.nombre.size() >= 2
+                    && request.resource.data.nombre.size() <= 50
+                    && request.resource.data.password is string
+                    && request.resource.data.password.size() == 64; // SHA-256 hex
+      allow update, delete: if request.auth != null;
+    }
+
+    // ── PREDICCIONES ──
+    // Cualquiera puede leer (tabla de quinielas es pública)
+    // Solo se puede escribir si el jugadorId en el documento es un string válido
+    // (No tenemos auth de jugadores en Firebase, así que validamos estructura)
+    match /predicciones/{docId} {
+      allow read: if true;
+
+      allow create, update: if request.resource.data.keys().hasAll([
+                          'jugadorId', 'jugadorNombre', 'partidoId',
+                          'jornada', 'pick', 'guardadoEn'
+                        ])
+                        && request.resource.data.jugadorId is string
+                        && request.resource.data.pick in ['L', 'E', 'V']
+                        && request.resource.data.jornada in ['jornada1', 'jornada2', 'jornada3'];
+
+        allow delete: if request.auth != null;
+    }
+
+    // ── RESULTADOS ──
+    // Lectura pública (jugadores ven resultados)
+    // Solo admin autenticado con Firebase Auth puede escribir
+    match /resultados/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── CONFIG (fechas límite, aparición de jornadas) ──
+    // Lectura pública (jugadores necesitan saber fechas límite)
+    // Solo admin autenticado puede escribir
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Bloquear todo lo demás ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

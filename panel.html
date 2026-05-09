@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Admin - Quiniela Mundialista 2026</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="css/panel.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="img/logo.png" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════
+       NAVBAR
+  ══════════════════════════════ -->
+  <nav class="navbar-panel">
+
+    <!-- Hamburguesa (solo móvil) -->
+    <button class="btn-hamburguesa" id="btn-hamburguesa" onclick="toggleMenu()" aria-label="Menú">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Logo + Título + Badge (centro) -->
+    <div class="navbar-brand-area">
+      <img src="img/logo.png" alt="Logo" class="navbar-logo" />
+      <span class="navbar-title">
+        <span class="gold">Quiniela </span><span class="mexico">Mundialista</span>
+      </span>
+      <span class="badge-admin">Admin</span>
+    </div>
+
+    <!-- Tabs (solo desktop) -->
+    <div class="navbar-nav-tabs">
+      <button class="nav-tab-btn active" id="tab-dashboard"  onclick="cambiarSeccion('dashboard')">Dashboard</button>
+      <button class="nav-tab-btn"        id="tab-partidos"   onclick="cambiarSeccion('partidos')">Partidos</button>
+      <button class="nav-tab-btn"        id="tab-jugadores"  onclick="cambiarSeccion('jugadores')">Jugadores</button>
+      <button class="nav-tab-btn"        id="tab-posiciones" onclick="cambiarSeccion('posiciones')">Posiciones</button>
+      <button class="nav-tab-btn"        id="tab-grupos"     onclick="cambiarSeccion('grupos')">Grupos</button>
+      <button class="nav-tab-btn"        id="tab-config"     onclick="cambiarSeccion('config')">Config</button>
+    </div>
+
+    <!-- Botón salir -->
+    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+
+  </nav>
+
+  <!-- ══════════════════════════════
+       MENÚ LATERAL (móvil)
+  ══════════════════════════════ -->
+  <div class="menu-lateral" id="menu-lateral">
+    <button class="nav-tab-btn active" id="tab-m-dashboard"  onclick="cambiarSeccion('dashboard', true)">📊 Dashboard</button>
+    <button class="nav-tab-btn"        id="tab-m-partidos"   onclick="cambiarSeccion('partidos', true)">⚽ Partidos</button>
+    <button class="nav-tab-btn"        id="tab-m-jugadores"  onclick="cambiarSeccion('jugadores', true)">👥 Jugadores</button>
+    <button class="nav-tab-btn"        id="tab-m-posiciones" onclick="cambiarSeccion('posiciones', true)">🏆 Posiciones</button>
+    <button class="nav-tab-btn"        id="tab-m-grupos"     onclick="cambiarSeccion('grupos', true)">🌍 Grupos</button>
+    <button class="nav-tab-btn"        id="tab-m-config"     onclick="cambiarSeccion('config', true)">⚙️ Config</button>
+  </div>
+
+  <!-- Overlay -->
+  <div class="menu-overlay" id="menu-overlay" onclick="cerrarMenu()"></div>
+
+  <!-- ══════════════════════════════
+       CONTENIDO
+  ══════════════════════════════ -->
+  <main class="panel-content">
+
+    <!-- DASHBOARD -->
+    <section class="seccion active" id="sec-dashboard">
+      <div class="container-fluid">
+
+        <!-- Título -->
+        <h2 class="dashboard-title">Dashboard</h2>
+        <p class="dashboard-sub">Resumen general de la jornada</p>
+
+        <!-- Tarjetas stats -->
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-registrados">0</div>
+              <div class="stat-label">Registrados</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-conquiniela">0</div>
+              <div class="stat-label">Con quiniela</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-resultados">0</div>
+              <div class="stat-label">Resultados</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-porjugar">0</div>
+              <div class="stat-label">Por jugar</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner quinielas -->
+        <div class="banner-quinielas mb-3" id="banner-quinielas">
+          <div>
+            <div class="banner-title">Quinielas Ocultas</div>
+            <div class="banner-sub">Los jugadores no pueden ver las quinielas de otros aún.</div>
+          </div>
+          <button class="btn-publicar" id="btn-publicar" onclick="togglePublicar()">Publicar</button>
+        </div>
+
+        <!-- Mensaje estado -->
+        <div class="mensaje-estado" id="mensaje-estado" style="display:none;"></div>
+
+        <!-- Banners jornadas finalizadas -->
+        <div id="banners-jornadas" class="mb-3"></div>
+
+        <!-- Estado partidos jornada activa -->
+        <div class="panel-card">
+          <div class="panel-card-title">📊 Estado de Partidos</div>
+          <div id="estado-partidos"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PARTIDOS -->
+    <section class="seccion" id="sec-partidos">
+      <div class="container-fluid">
+
+        <!-- Título -->
+        <h2 class="dashboard-title">Partidos</h2>
+        <p class="dashboard-sub">Edita equipos y registra resultados</p>
+
+        <!-- Card selector de fase -->
+        <div class="panel-card mb-4">
+          <div class="panel-card-title">🌐 Mundial 2026 — Cargar Fase</div>
+          <p style="color:var(--text-muted-custom); font-size:0.8rem; margin-bottom:1rem;">
+            Jornadas 1-3 tienen partidos precargados · Las demás fases el admin ingresa los equipos
+          </p>
+          <div class="fases-grid" id="fases-grid">
+            <button class="btn-fase activa"    id="fase-j1" onclick="cargarFase('jornada1')">🟢 Jornada 1</button>
+            <button class="btn-fase pendiente" id="fase-j2" onclick="cargarFase('jornada2')">🟡 Jornada 2</button>
+            <button class="btn-fase pendiente" id="fase-j3" onclick="cargarFase('jornada3')">🔴 Jornada 3</button>
+            <button class="btn-fase bloqueada" id="fase-16" onclick="cargarFase('16avos')">⚪ Dieciseisavos</button>
+            <button class="btn-fase bloqueada" id="fase-8"  onclick="cargarFase('octavos')">⚪ Octavos</button>
+            <button class="btn-fase bloqueada" id="fase-4"  onclick="cargarFase('cuartos')">⚪ Cuartos</button>
+            <button class="btn-fase bloqueada" id="fase-sf" onclick="cargarFase('semifinal')">⚪ Semifinal</button>
+            <button class="btn-fase bloqueada" id="fase-f"  onclick="cargarFase('final')">🏆 Final</button>
+          </div>
+        </div>
+
+        <!-- Header partidos -->
+        <div class="partidos-header">
+          <span class="partidos-count" id="partidos-count">0 PARTIDOS</span>
+          <div class="partidos-acciones">
+            <button class="btn-guardar-todo" onclick="guardarTodo()">Guardar todo</button>
+            <button class="btn-aleatorio" onclick="resultadosAleatorios()">🌐 Resultados aleatorios (prueba)</button>
+          </div>
+        </div>
+
+        <!-- Lista de partidos -->
+        <div id="lista-partidos"></div>
+
+      </div>
+    </section>
+
+    <!-- JUGADORES -->
+    <section class="seccion" id="sec-jugadores">
+      <div class="container-fluid">
+        <h2 class="dashboard-title">Jugadores</h2>
+        <p class="dashboard-sub">Cuentas registradas y sus quinielas</p>
+
+        <div class="panel-card">
+          <!-- Header tabla -->
+          <div class="admin-section-status mb-3">
+            <div class="admin-status-item">
+              <span class="admin-status-label">Jugadores</span>
+              <strong id="jugadores-count">0</strong>
+            </div>
+
+            <div class="admin-status-live">
+            <span class="live-dot"></span>
+            En tiempo real
+            </div>
+          </div>
+
+          <!-- Tabla Bootstrap responsive -->
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle jugadores-tabla">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Jugador</th>
+                  <th scope="col">Registro</th>
+                  <th scope="col">Quiniela</th>
+                  <th scope="col">Aciertos</th>
+                  <th scope="col"></th>
+                </tr>
+              </thead>
+              <tbody id="jugadores-tbody">
+                <tr>
+                  <td colspan="6" class="text-center py-4" style="color: var(--text-muted);">
+                    Cargando jugadores...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- POSICIONES -->
+    <section class="seccion" id="sec-posiciones">
+      <div class="container-fluid">
+        <h2 class="dashboard-title">Posiciones</h2>
+        <p class="dashboard-sub">Clasificación en tiempo real</p>
+
+        <div class="panel-card">
+          <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <span class="jugadores-count" id="posiciones-count">0 JUGADORES</span>
+            <span class="jugadores-count" style="font-size:0.72rem; color:var(--text-muted);">EN TIEMPO REAL</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle jugadores-tabla">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Jugador</th>
+                  <th scope="col">Aciertos</th>
+                  <th scope="col">Porcentaje</th>
+                  <th scope="col">Progreso</th>
+                </tr>
+              </thead>
+              <tbody id="posiciones-tbody">
+                <tr>
+                  <td colspan="5" class="text-center py-4" style="color: var(--text-muted);">
+                    Cargando posiciones...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- GRUPOS -->
+    <section class="seccion" id="sec-grupos">
+      <div class="container-fluid">
+        <h2 class="dashboard-title">Tabla de Grupos</h2>
+        <p class="dashboard-sub">Posiciones calculadas automáticamente con los resultados registrados</p>
+
+        <div class="admin-section-status mb-3">
+          <div class="admin-status-item">
+            <span class="admin-status-label">Grupos</span>
+            <strong>En vivo</strong>
+          </div>
+
+          <div class="admin-status-live">
+            <span class="live-dot"></span>
+            En tiempo real
+          </div>
+        </div>
+
+        <div id="grupos-contenedor">
+          <div class="text-center py-5" style="color:var(--text-muted);">Cargando grupos...</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section class="seccion" id="sec-config">
+      <div class="container-fluid">
+        <h2 class="dashboard-title">Configuración</h2>
+        <p class="dashboard-sub">Opciones del sistema</p>
+
+        <!-- Cambiar contraseña -->
+        <div class="panel-card mb-3">
+          <h6 class="config-card-title">Cambiar contraseña de admin</h6>
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+              <label class="config-label">Contraseña actual</label>
+              <input type="password" class="config-input" id="cfg-pass-actual" placeholder="Contraseña actual" maxlength="30" />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="config-label">Nueva contraseña</label>
+              <input type="password" class="config-input" id="cfg-pass1" placeholder="Mínimo 4 caracteres" maxlength="30" />
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="config-label">Confirmar nueva</label>
+              <input type="password" class="config-input" id="cfg-pass2" placeholder="Repite la contraseña" maxlength="30" />
+            </div>
+            <div class="col-12">
+              <button class="btn-gold-config" onclick="cambiarPassword()">Guardar contraseña</button>
+            </div>
+          </div>
+          <div class="reset-msg mt-2" id="cfg-pass-msg" style="display:none;"></div>
+        </div>
+
+        <!-- Fecha límite de picks -->
+        <div class="panel-card mb-3">
+          <h6 class="config-card-title">⏰ Fecha límite para picks</h6>
+          <p style="color:var(--text-muted); font-size:0.82rem; margin-bottom:1.25rem;">
+            Los jugadores no podrán hacer ni modificar sus predicciones después de la fecha y hora de cada jornada.
+          </p>
+
+          <!-- Jornada 1 -->
+          <p style="color:#6fe0a8; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟢 Jornada 1</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-j1" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-j1" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('jornada1')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('jornada1')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-j1" style="display:none;"></div>
+          <div class="mb-3" id="cfg-fecha-actual-j1" style="font-size:0.78rem; color:var(--text-muted);"></div>
+
+          <!-- Jornada 2 -->
+          <p style="color:var(--gold); font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟡 Jornada 2</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-j2" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-j2" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('jornada2')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('jornada2')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-j2" style="display:none;"></div>
+          <div class="mb-3" id="cfg-fecha-actual-j2" style="font-size:0.78rem; color:var(--text-muted);"></div>
+
+          <!-- Jornada 3 -->
+          <p style="color:#ff6b7a; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🔴 Jornada 3</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-j3" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-j3" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('jornada3')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('jornada3')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-j3" style="display:none;"></div>
+          <div id="cfg-fecha-actual-j3" style="font-size:0.78rem; color:var(--text-muted);"></div>
+        </div>
+
+        <!-- Fecha de aparición de jornadas -->
+        <div class="panel-card mb-3">
+          <h6 class="config-card-title">📅 Fecha de aparición de jornadas</h6>
+          <p style="color:var(--text-muted); font-size:0.82rem; margin-bottom:1.25rem;">
+            Fecha y hora en que aparecerá la jornada para los jugadores. La Jornada 1 siempre está visible.
+          </p>
+
+          <!-- Jornada 2 -->
+          <p style="color:var(--gold); font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟡 Jornada 2</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de aparición</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-j2" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-j2" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('jornada2')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('jornada2')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-j2" style="display:none;"></div>
+          <div class="mb-3" id="cfg-aparicion-actual-j2" style="font-size:0.78rem; color:var(--text-muted);"></div>
+
+          <!-- Jornada 3 -->
+          <p style="color:#ff6b7a; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🔴 Jornada 3</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de aparición</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-j3" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-j3" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('jornada3')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('jornada3')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-j3" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-j3" style="font-size:0.78rem; color:var(--text-muted);"></div>
+        </div>
+
+        <!-- Reset por jornada -->
+        <div class="panel-card mb-3">
+          <h6 class="config-card-title">🧪 Reset de Prueba</h6>
+          <p style="color:var(--text-muted); font-size:0.82rem; margin-bottom:1.25rem;">
+            Borra los resultados guardados en Firebase. La Jornada 1 borra todo, la Jornada 2 borra J2 y J3, la Jornada 3 solo borra J3.
+          </p>
+          <div class="reset-btns">
+            <button class="btn-reset j1" onclick="resetJornada('jornada1')">🗑️ Resetear Jornada 1 (borra todo)</button>
+            <button class="btn-reset j2" onclick="resetJornada('jornada2')">🗑️ Resetear Jornada 2 (borra J2 y J3)</button>
+            <button class="btn-reset j3" onclick="resetJornada('jornada3')">🗑️ Resetear Jornada 3 (solo J3)</button>
+          </div>
+          <div class="reset-msg" id="reset-msg" style="display:none;"></div>
+        </div>
+
+        <!-- Zona de peligro -->
+        <div class="panel-card zona-peligro">
+          <h6 class="config-card-title peligro">⚠️ Zona de peligro</h6>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">
+            Borra todos los jugadores, quinielas y resultados.
+          </p>
+          <button class="btn-reiniciar" onclick="reiniciarTodo()">Reiniciar todo</button>
+          <div class="reset-msg mt-2" id="reiniciar-msg" style="display:none;"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Lógica Panel -->
+  <script src="js/partidos.js"></script>
+  <script type="module" src="js/panel.js"></script>
+
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
