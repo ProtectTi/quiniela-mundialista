@@ -4,7 +4,7 @@
 // Solo cachea assets estáticos (HTML, CSS, JS, imágenes)
 // ══════════════════════════════════════
 
-const CACHE_NAME = 'quiniela-2026-v1';
+const CACHE_NAME = 'quiniela-2026-v4';
 
 const ASSETS_TO_CACHE = [
   './jugador.html',
@@ -78,7 +78,7 @@ self.addEventListener('fetch', event => {
       .catch(() =>
         // Sin red: servir desde cache
         caches.match(event.request).then(cached =>
-          cached || caches.match('/404.html')
+          cached || caches.match('./jugador.html')
         )
       )
   );
