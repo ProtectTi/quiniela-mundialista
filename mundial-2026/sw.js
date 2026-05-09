@@ -7,27 +7,27 @@
 const CACHE_NAME = 'quiniela-2026-v1';
 
 const ASSETS_TO_CACHE = [
-  '/jugador.html',
-  '/predicciones.html',
-  '/admin.html',
-  '/panel.html',
-  '/404.html',
-  '/css/jugador.css',
-  '/css/predicciones.css',
-  '/css/admin.css',
-  '/css/panel.css',
-  '/js/partidos.js',
-  '/js/jugador.js',
-  '/js/predicciones.js',
-  '/js/admin.js',
-  '/js/panel.js',
-  '/js/firebase/config.js',
-  '/js/utils/helpers.js',
-  '/js/utils/animations.js',
-  '/js/utils/toasts.js',
-  '/img/logo.png',
-  '/img/cancha.png',
-  '/manifest.json'
+  './jugador.html',
+  './predicciones.html',
+  './admin.html',
+  './panel.html',
+  './404.html',
+  './css/jugador.css',
+  './css/predicciones.css',
+  './css/admin.css',
+  './css/panel.css',
+  './js/partidos.js',
+  './js/jugador.js',
+  './js/predicciones.js',
+  './js/admin.js',
+  './js/panel.js',
+  './js/firebase/config.js',
+  './js/utils/helpers.js',
+  './js/utils/animations.js',
+  './js/utils/toasts.js',
+  './img/logo.png',
+  './img/cancha.png',
+  './manifest.json'
 ];
 
 // ── INSTALL: cachear assets estáticos ──
