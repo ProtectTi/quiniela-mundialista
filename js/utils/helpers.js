@@ -3,8 +3,8 @@
 // ══════════════════════════════
 
 export function getFlag(equipo, banderas) {
-  const mapa = banderas || (typeof BANDERAS !== 'undefined' ? BANDERAS : {});
-  return mapa[equipo] || 'un';
+  const mapa = banderas || window.BANDERAS || {};
+  return mapa[equipo] || 'mx';
 }
 
 export function getNumeroJornada(jornada) {

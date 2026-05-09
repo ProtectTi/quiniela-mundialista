@@ -163,3 +163,6 @@ const PARTIDOS_MUNDIAL = {
     { id: 'j3-24', grupo: 'J', local: 'Jordania',        visitante: 'Argentina',           fecha: '27 Jun', hora: '20:00', estadio: 'AT&T Stadium, Arlington' },
   ]
 };
+
+window.BANDERAS = BANDERAS;
+window.PARTIDOS_MUNDIAL = PARTIDOS_MUNDIAL;
