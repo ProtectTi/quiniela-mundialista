@@ -168,7 +168,6 @@ window.iniciarSesion = async function() {
   const nombre = document.getElementById('login-nombre').value.trim();
   const pass   = document.getElementById('login-pass').value;
 
-  // Verificar bloqueo por intentos fallidos
   const mensajeBloqueo = verificarBloqueo();
   if (mensajeBloqueo) return showAlert(mensajeBloqueo, 'error');
 
@@ -189,8 +188,7 @@ window.iniciarSesion = async function() {
 
     const q = query(
       collection(db, 'jugadores'),
-      where('nombreKey', '==', nombre.toLowerCase()),
-      where('password',  '==', passHash)
+      where('nombreKey', '==', nombre.toLowerCase())
     );
 
     const snap = await getDocs(q);
@@ -199,23 +197,44 @@ window.iniciarSesion = async function() {
       registrarIntentoFallido();
       const data = getIntentosData();
       const restantes = Math.max(0, MAX_INTENTOS - data.count);
-      const msgExtra = restantes > 0 ? ` (${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''})` : ' — Bloqueado por 5 min';
+      const msgExtra = restantes > 0
+        ? ` (${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''})`
+        : ' — Bloqueado por 5 min';
+
       showAlert('Nombre o contraseña incorrectos.' + msgExtra, 'error');
       setLoading('btn-login', false);
       return;
     }
 
-    const jugador = snap.docs[0].data();
+    const docJugador = snap.docs[0];
+    const jugador = docJugador.data();
+
+    const passwordCorrecta =
+      jugador.password === passHash || jugador.password === pass;
+
+    if (!passwordCorrecta) {
+      registrarIntentoFallido();
+      const data = getIntentosData();
+      const restantes = Math.max(0, MAX_INTENTOS - data.count);
+      const msgExtra = restantes > 0
+        ? ` (${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''})`
+        : ' — Bloqueado por 5 min';
+
+      showAlert('Nombre o contraseña incorrectos.' + msgExtra, 'error');
+      setLoading('btn-login', false);
+      return;
+    }
 
     localStorage.setItem(
       'jugador',
       JSON.stringify({
-        id: snap.docs[0].id,
+        id: docJugador.id,
         nombre: jugador.nombre
       })
     );
 
     limpiarIntentos();
+
     showAlert(`¡Hola de nuevo, ${jugador.nombre}! Redirigiendo...`, 'success');
 
     setTimeout(() => {
