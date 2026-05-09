@@ -25,13 +25,16 @@ service cloud.firestore {
     // (No tenemos auth de jugadores en Firebase, así que validamos estructura)
     match /predicciones/{docId} {
       allow read: if true;
-      allow write: if request.resource.data.keys().hasAll([
-                      'jugadorId', 'jugadorNombre', 'partidoId',
-                      'jornada', 'pick', 'guardadoEn'
-                    ])
-                    && request.resource.data.jugadorId is string
-                    && request.resource.data.pick in ['L', 'E', 'V']
-                    && request.resource.data.jornada in ['jornada1', 'jornada2', 'jornada3'];
+
+      allow create, update: if request.resource.data.keys().hasAll([
+                          'jugadorId', 'jugadorNombre', 'partidoId',
+                          'jornada', 'pick', 'guardadoEn'
+                        ])
+                        && request.resource.data.jugadorId is string
+                        && request.resource.data.pick in ['L', 'E', 'V']
+                        && request.resource.data.jornada in ['jornada1', 'jornada2', 'jornada3'];
+
+        allow delete: if request.auth != null;
     }
 
     // ── RESULTADOS ──

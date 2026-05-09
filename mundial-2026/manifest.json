@@ -3,6 +3,7 @@
   "short_name": "Quiniela 2026",
   "description": "Predice los resultados del Mundial FIFA 2026 y compite con tus amigos.",
   "start_url": "/jugador.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0d0d1a",
   "theme_color": "#f5c518",
