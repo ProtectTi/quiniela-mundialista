@@ -1602,3 +1602,624 @@ table tbody tr:hover {
 .pick-btn:active {
   transform: scale(0.95);
 }
+
+/* ════════════════════════════════════════
+   CLASIFICADOS + DIECISEISAVOS
+════════════════════════════════════════ */
+.clasificados-section,
+.dieciseisavos-preview {
+  background: var(--card-bg);
+  border: 1px solid rgba(245,197,24,0.12);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.clasificados-header,
+.dieciseisavos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.clasificados-header h3,
+.dieciseisavos-header h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1.45rem;
+  letter-spacing: 1.5px;
+  margin: 0;
+}
+
+.clasificados-header p,
+.dieciseisavos-header p {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.clasificados-badge {
+  background: rgba(0,104,71,0.2);
+  border: 1px solid rgba(0,104,71,0.7);
+  color: #6fe0a8;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.clasificados-card {
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  height: 100%;
+}
+
+.clasificados-card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 1.4px;
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.clasificados-card-title.oro { color: var(--gold); }
+.clasificados-card-title.plata { color: #d9d9d9; }
+.clasificados-card-title.bronce { color: #cd7f32; }
+
+.clasificados-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.clasificado-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.clasificado-row:last-child {
+  border-bottom: none;
+}
+
+.clasificado-row.no-clasifica {
+  opacity: 0.35;
+}
+
+.clasificado-equipo {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 0.45rem;
+  row-gap: 0.05rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.clasificado-equipo img {
+  grid-row: span 2;
+}
+
+.clasificado-equipo span {
+  font-weight: 900;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clasificado-equipo small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.clasificado-stats {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.clasificado-stats span {
+  color: #6fe0a8;
+  font-weight: 900;
+  font-size: 0.78rem;
+}
+
+.clasificado-stats small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+}
+
+.dieciseisavos-preview {
+  margin-top: 1.25rem;
+  background: rgba(0,0,0,0.35);
+}
+
+.dieciseisavos-grid {
+  align-items: stretch;
+}
+
+.dieciseisavos-card {
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.95rem;
+  padding: 0.9rem;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.dieciseisavos-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245,197,24,0.28);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+}
+
+.dieciseisavos-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.dieciseisavos-card-top span {
+  color: #8ca0c8;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.dieciseisavos-card-top strong {
+  font-family: 'Bebas Neue', sans-serif;
+  color: #fff;
+  font-size: 1.45rem;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.dieciseisavos-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dieciseisavos-team {
+  display: grid;
+  grid-template-columns: 42px 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.dieciseisavos-team .slot-label {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.dieciseisavos-team strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+}
+
+.dieciseisavos-team small {
+  grid-column: 3;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+}
+
+.dieciseisavos-team.pendiente {
+  opacity: 0.7;
+}
+
+.dieciseisavos-vs {
+  text-align: center;
+  color: var(--gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 1.5px;
+  line-height: 1;
+}
+
+.shield-icon {
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.dieciseisavos-info {
+  margin-top: 0.8rem;
+  text-align: center;
+  color: #8ca0c8;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.dieciseisavos-info span {
+  margin: 0 0.3rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+  .clasificados-section,
+  .dieciseisavos-preview {
+    padding: 1rem;
+  }
+
+  .clasificados-header h3,
+  .dieciseisavos-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .clasificado-equipo span,
+  .dieciseisavos-team strong {
+    font-size: 0.76rem;
+  }
+
+  .dieciseisavos-card {
+    padding: 0.8rem;
+  }
+
+  .dieciseisavos-card-top strong {
+    font-size: 1.3rem;
+  }
+
+  .dieciseisavos-info {
+    font-size: 0.64rem;
+  }
+}
+
+/* Ajuste dieciseisavos centrado */
+.dieciseisavos-team {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.35rem;
+  min-height: 86px;
+}
+
+.dieciseisavos-team-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.dieciseisavos-team-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dieciseisavos-team small {
+  grid-column: auto !important;
+  font-size: 0.68rem;
+}
+
+.dieciseisavos-info {
+  min-height: 38px;
+}
+
+.btn-generar-dieciseisavos {
+  margin-top: 0.8rem;
+
+  background: linear-gradient(
+    135deg,
+    #00c896,
+    #00a878
+  );
+
+  color: #fff;
+
+  border: none;
+
+  border-radius: 0.75rem;
+
+  padding: 0.7rem 1rem;
+
+  font-weight: 900;
+
+  font-size: 0.82rem;
+
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.btn-generar-dieciseisavos:hover {
+  transform: translateY(-2px);
+  opacity: 0.92;
+}
+
+@media (max-width: 600px) {
+
+  .btn-generar-dieciseisavos {
+    width: 100%;
+  }
+
+}
+
+/* ════════════════════════════════════════
+   RESULTADOS ELIMINATORIAS
+════════════════════════════════════════ */
+.elim-marcador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0.55rem 0;
+}
+
+.elim-marcador input {
+  width: 54px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: #fff;
+  border-radius: 0.55rem;
+  padding: 0.45rem;
+  text-align: center;
+  font-weight: 900;
+}
+
+.elim-marcador span {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+.elim-ganador {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.elim-ganador button {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-muted);
+  border-radius: 0.6rem;
+  padding: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.elim-ganador button.activo {
+  background: rgba(0,104,71,0.35);
+  border-color: #006847;
+  color: #6fe0a8;
+}
+
+.btn-guardar-elim {
+  width: 100%;
+  margin-top: 0.75rem;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 0.7rem;
+  padding: 0.65rem;
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 500px) {
+  .elim-ganador {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-generar-octavos {
+  margin-top: 0.65rem;
+
+  background: linear-gradient(
+    135deg,
+    #3b82f6,
+    #2563eb
+  );
+
+  color: #fff;
+
+  border: none;
+
+  border-radius: 0.75rem;
+
+  padding: 0.7rem 1rem;
+
+  font-weight: 900;
+
+  font-size: 0.82rem;
+
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+
+  width: 100%;
+}
+
+.btn-generar-octavos:hover {
+  transform: translateY(-2px);
+  opacity: 0.92;
+}
+
+.btn-generar-cuartos {
+
+  margin-top: 0.65rem;
+
+  background: linear-gradient(
+    135deg,
+    #a855f7,
+    #7e22ce
+  );
+
+  color: #fff;
+
+  border: none;
+
+  border-radius: 0.75rem;
+
+  padding: 0.7rem 1rem;
+
+  font-weight: 900;
+
+  font-size: 0.82rem;
+
+  letter-spacing: 0.5px;
+
+  cursor: pointer;
+
+  width: 100%;
+}
+
+.btn-generar-semifinales {
+  margin-top: 0.65rem;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-generar-finales {
+  margin-top: 0.65rem;
+  background: linear-gradient(135deg, #facc15, #ca8a04);
+  color: #000;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* ════════════════════════════════════════
+   PARTIDOS JORNADAS — 7 COLUMNAS DESKTOP
+   Nº | Local | VS | Visitante | Marcador | LEV | Fecha/Estadio
+════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .partido-desktop {
+    display: grid !important;
+    grid-template-columns:
+      42px
+      minmax(150px, 1.25fr)
+      38px
+      minmax(150px, 1.25fr)
+      105px
+      105px
+      minmax(170px, 0.9fr);
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+  }
+
+  .partido-num {
+    min-width: 0;
+    width: auto;
+    text-align: center;
+  }
+
+  .partido-equipo {
+    flex: unset;
+    min-width: 0;
+  }
+
+  .partido-equipo.local,
+  .partido-equipo.visitante {
+    justify-content: center;
+  }
+
+  .partido-vs-txt {
+    text-align: center;
+    padding: 0;
+    font-weight: 900;
+  }
+
+  .partido-marcador {
+    justify-content: center;
+  }
+
+  .partido-lev {
+    justify-content: center;
+  }
+
+  .partido-detalle {
+    width: auto;
+    min-width: 0;
+    align-items: flex-end;
+  }
+
+  .partido-estadio {
+    max-width: 100%;
+  }
+}
+
+/* 768px a 900px: compacto */
+@media (max-width: 900px) and (min-width: 768px) {
+  .partido-desktop {
+    grid-template-columns:
+      34px
+      minmax(105px, 1fr)
+      28px
+      minmax(105px, 1fr)
+      88px
+      88px
+      minmax(120px, 0.85fr);
+    gap: 0.35rem;
+  }
+
+  .partido-equipo span {
+    font-size: 0.76rem;
+  }
+
+  .marcador-input {
+    width: 32px;
+    height: 30px;
+  }
+
+  .btn-lev {
+    width: 25px;
+  }
+
+  .partido-fecha-hora {
+    font-size: 0.66rem;
+  }
+
+  .partido-estadio {
+    font-size: 0.58rem;
+  }
+}

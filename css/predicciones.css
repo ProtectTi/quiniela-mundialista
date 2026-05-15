@@ -2397,3 +2397,268 @@ table tbody tr:hover {
     transform: translateY(0);
   }
 }
+/* ════════════════════════════════════════
+   ELIMINATORIAS — JUGADOR
+════════════════════════════════════════ */
+.elim-jugador-fase {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.elim-jugador-fase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.elim-jugador-fase-header h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1.35rem;
+  letter-spacing: 1.5px;
+  margin: 0;
+}
+
+.elim-jugador-fase-header span {
+  color: #6fe0a8;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.elim-jugador-card {
+  height: 100%;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.9rem;
+  padding: 0.85rem;
+}
+
+.elim-jugador-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.elim-jugador-top span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.elim-jugador-top strong {
+  font-family: 'Bebas Neue', sans-serif;
+  color: #fff;
+  font-size: 1.35rem;
+  letter-spacing: 1px;
+}
+
+.elim-jugador-team {
+  display: grid;
+  grid-template-columns: 42px 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.65rem;
+}
+
+.elim-jugador-team span {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1rem;
+}
+
+.elim-jugador-team strong {
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elim-jugador-vs {
+  text-align: center;
+  color: var(--gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  margin: 0.4rem 0;
+}
+
+.elim-jugador-info {
+  margin-top: 0.7rem;
+  text-align: center;
+  color: #8ca0c8;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.elim-jugador-info span {
+  margin: 0 0.3rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 500px) {
+  .elim-jugador-fase {
+    padding: 0.85rem;
+  }
+
+  .elim-jugador-fase-header h3 {
+    font-size: 1.15rem;
+  }
+
+  .elim-jugador-team strong {
+    font-size: 0.76rem;
+  }
+}
+
+/* ════════════════════════════════════════
+   ELIMINATORIAS JUGADOR — PICKS
+════════════════════════════════════════ */
+.elim-jugador-fase {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(0,104,71,0.45);
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.elim-pick-card {
+  height: 100%;
+  background: rgba(0,0,0,0.48);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.95rem;
+  padding: 0.9rem;
+}
+
+.elim-pick-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.elim-pick-top strong {
+  color: var(--gold);
+  font-size: 0.72rem;
+}
+
+.elim-pick-match {
+  display: grid;
+  grid-template-columns: 1fr 34px 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.elim-pick-team {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.elim-pick-team img {
+  display: block;
+  margin: 0 auto 0.35rem;
+}
+
+.elim-pick-team strong {
+  display: block;
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elim-pick-team small {
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.elim-pick-vs {
+  text-align: center;
+  color: var(--gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+}
+
+.elim-pick-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.elim-pick-options button {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 0.7rem;
+  padding: 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.elim-pick-options button.activo {
+  background: rgba(0,104,71,0.35);
+  border-color: #00c896;
+  color: #6fe0a8;
+}
+
+@media (max-width: 500px) {
+  .elim-pick-match {
+    grid-template-columns: 1fr;
+  }
+
+  .elim-pick-vs {
+    margin: -0.2rem 0;
+  }
+
+  .elim-pick-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.elim-jugador-body {
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.3s ease;
+  max-height: 9999px;
+  opacity: 1;
+}
+
+.elim-jugador-body.contraido {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ajuste eliminatorias para que se vean como jornadas */
+.elim-jugador-body .partido-pick {
+  margin: 0;
+}
+
+.elim-jugador-body .pick-btns {
+  grid-template-columns: 1fr 1fr;
+}
+
+.elim-jugador-body .btn-pick {
+  justify-content: center;
+}
+
+.elim-jugador-body .btn-pick.activo,
+.elim-jugador-body .btn-pick.seleccionado {
+  border-color: #00c896;
+  background: rgba(0,104,71,0.35);
+  color: #6fe0a8;
+}

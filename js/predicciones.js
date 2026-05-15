@@ -55,6 +55,14 @@ const guardandoPicks = {};
 
 // ── HELPERS GENERALES ──
 const JORNADAS = ['jornada1', 'jornada2', 'jornada3'];
+const FASES_ELIMINATORIAS_JUGADOR = [
+  { fase: 'dieciseisavos', label: 'Dieciseisavos' },
+  { fase: 'octavos', label: 'Octavos' },
+  { fase: 'cuartos', label: 'Cuartos' },
+  { fase: 'semifinal', label: 'Semifinales' },
+  { fase: 'tercer', label: '3er Lugar' },
+  { fase: 'final', label: 'Final' }
+];
 const TOTAL_PARTIDOS_MUNDIAL = 72; // Fase de grupos (3 jornadas × 24 partidos)
 
 function crearMapaResultados(snap, valor = 'lev') {
@@ -382,9 +390,10 @@ window.cambiarSeccion = function(nombre, desdeMobil = false) {
   if (nombre === 'inicio') cargarInicio();
 
   if (nombre === 'miquiniela') {
-    iniciarBannerTiempoReal();
-    cargarMiQuiniela();
-  }
+  iniciarBannerTiempoReal();
+  cargarMiQuiniela();
+  iniciarEliminatoriasJugadorRealtime();
+}
 
   if (nombre === 'quinielas') {
     cargarQuinielas();
@@ -1407,6 +1416,10 @@ window.cargarPosiciones = function() {
     onSnapshot(collection(db, 'resultados'), programarRenderPosiciones)
   );
 
+  unsubscribePosiciones.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderPosiciones)
+  );
+
   renderPosicionesRealtime();
 };
 
@@ -1417,19 +1430,29 @@ async function renderPosicionesRealtime() {
   if (!contenedor) return;
 
   try {
-    const [jugSnap, predSnap, resSnap] = await Promise.all([
+    const [jugSnap, predSnap, resSnap, elimSnap] = await Promise.all([
       getDocs(collection(db, 'jugadores')),
       getDocs(collection(db, 'predicciones')),
-      getDocs(collection(db, 'resultados'))
+      getDocs(collection(db, 'resultados')),
+      getDocs(collection(db, 'eliminatorias'))
     ]);
-
-    const totalResultados = resSnap.size;
 
     const resultadosMap = {};
     resSnap.docs.forEach(d => {
       const data = d.data();
       resultadosMap[(data.partidoId || '').toLowerCase()] = data.lev;
     });
+
+    const eliminatoriasMap = {};
+    elimSnap.docs.forEach(d => {
+      const data = d.data();
+
+      if (data.ganador) {
+        eliminatoriasMap[d.id] = data.ganador;
+      }
+    });
+
+    const totalResultados = resSnap.size + Object.keys(eliminatoriasMap).length;
 
     const statsJugadores = {};
 
@@ -1438,7 +1461,9 @@ async function renderPosicionesRealtime() {
         id: d.id,
         nombre: d.data().nombre || 'Jugador',
         picks: 0,
-        aciertos: 0
+        aciertos: 0,
+        aciertosGrupo: 0,
+        aciertosElim: 0
       };
     });
 
@@ -1450,10 +1475,22 @@ async function renderPosicionesRealtime() {
 
       statsJugadores[jugadorId].picks++;
 
-      const resultadoReal = resultadosMap[(data.partidoId || '').toLowerCase()];
+      const partidoId = data.partidoId || '';
+
+      const resultadoReal =
+        resultadosMap[partidoId.toLowerCase()] ||
+        eliminatoriasMap[partidoId];
 
       if (resultadoReal && resultadoReal === data.pick) {
         statsJugadores[jugadorId].aciertos++;
+
+        if (resultadosMap[partidoId.toLowerCase()]) {
+          statsJugadores[jugadorId].aciertosGrupo++;
+        }
+
+        if (eliminatoriasMap[partidoId]) {
+          statsJugadores[jugadorId].aciertosElim++;
+        }
       }
     });
 
@@ -1561,6 +1598,7 @@ function renderFilaPosicion(jugador, posicion, totalResultados) {
 
       <div class="posiciones-col posicion-aciertos">
         <span>${jugador.aciertos}/${totalResultados}</span>
+        <small>G:${jugador.aciertosGrupo} · E:${jugador.aciertosElim}</small>
       </div>
 
       <div class="posiciones-col posicion-porcentaje">
@@ -1641,8 +1679,14 @@ async function renderGruposJugadorRealtime() {
 
 function calcularGrupos(resultados) {
   const stats = {};
+  const ordenEquipos = {};
+  let orden = 1;
 
   const iniciar = (equipo, grupo) => {
+    if (!ordenEquipos[equipo]) {
+      ordenEquipos[equipo] = orden++;
+    }
+
     if (!stats[equipo]) {
       stats[equipo] = {
         grupo,
@@ -1651,11 +1695,21 @@ function calcularGrupos(resultados) {
         pe: 0,
         pp: 0,
         gf: 0,
-        gc: 0
+        gc: 0,
+        orden: ordenEquipos[equipo]
       };
     }
   };
 
+  // Primero cargamos equipos en el orden real del calendario
+  ['jornada1', 'jornada2', 'jornada3'].forEach(jornada => {
+    (PARTIDOS_MUNDIAL[jornada] || []).forEach(p => {
+      iniciar(p.local, p.grupo);
+      iniciar(p.visitante, p.grupo);
+    });
+  });
+
+  // Luego aplicamos resultados
   resultados.forEach(r => {
     if (!r.local || !r.visitante || r.golesLocal === undefined) return;
 
@@ -1686,13 +1740,6 @@ function calcularGrupos(resultados) {
     }
   });
 
-  ['jornada1', 'jornada2', 'jornada3'].forEach(jornada => {
-    (PARTIDOS_MUNDIAL[jornada] || []).forEach(p => {
-      iniciar(p.local, p.grupo);
-      iniciar(p.visitante, p.grupo);
-    });
-  });
-
   const grupos = {};
 
   Object.entries(stats).forEach(([equipo, s]) => {
@@ -1708,7 +1755,7 @@ function calcularGrupos(resultados) {
       pts(b) - pts(a) ||
       dg(b) - dg(a) ||
       b.gf - a.gf ||
-      a.equipo.localeCompare(b.equipo, 'es', { sensitivity: 'base' })
+      a.orden - b.orden
     );
   });
 
@@ -2043,3 +2090,500 @@ window.addEventListener('online', () => {
     }, 2500);
   }
 });
+
+// ══════════════════════════════
+// ELIMINATORIAS — JUGADOR SOLO LECTURA
+// ══════════════════════════════
+async function cargarEliminatoriasJugador() {
+  const contenedor = document.getElementById('eliminatorias-jugador-contenido');
+  if (!contenedor) return;
+
+  contenedor.innerHTML = `
+    <div class="text-center py-4" style="color:var(--text-muted);">
+      Cargando eliminatorias...
+    </div>
+  `;
+
+  try {
+    const [elimSnap, cfgSnap, predSnap] = await Promise.all([
+      getDocs(collection(db, 'eliminatorias')),
+      getDocs(collection(db, 'config')),
+      getDocs(query(collection(db, 'predicciones'), where('jugadorId', '==', jugador.id)))
+    ]);
+
+    const eliminatorias = elimSnap.docs.map(d => ({
+      idDoc: d.id,
+      ...d.data()
+    }));
+
+    const configMap = {};
+    cfgSnap.docs.forEach(d => {
+      configMap[d.id] = d.data();
+    });
+
+    const picksEliminatorias = {};
+
+    const aciertosEliminatorias = {};
+
+    FASES_ELIMINATORIAS_JUGADOR.forEach(f => {
+      aciertosEliminatorias[f.fase] = {
+        aciertos: 0,
+        resultados: 0,
+        picks: 0
+      };
+    });
+
+    predSnap.docs.forEach(d => {
+      const data = d.data();
+
+      if (FASES_ELIMINATORIAS_JUGADOR.some(f => f.fase === data.jornada)) {
+        picksEliminatorias[data.partidoId] = data.pick;
+      }
+    });
+
+    predSnap.docs.forEach(d => {
+      const data = d.data();
+
+      if (aciertosEliminatorias[data.jornada]) {
+        aciertosEliminatorias[data.jornada].picks++;
+      }
+    });
+
+    eliminatorias.forEach(p => {
+      if (!p.ganador) return;
+
+      if (!aciertosEliminatorias[p.fase]) return;
+
+      aciertosEliminatorias[p.fase].resultados++;
+
+      const pickJugador = picksEliminatorias[p.idDoc];
+
+      if (pickJugador && pickJugador === p.ganador) {
+        aciertosEliminatorias[p.fase].aciertos++;
+      }
+    });
+
+    const ahora = new Date();
+
+    let html = `
+      <div class="jornada-picks-card">
+        <div class="jornada-picks-header">
+          <div>
+            <span class="jornada-picks-titulo">🏆 Eliminatorias</span>
+          </div>
+        </div>
+
+        <div class="jornada-picks-body">
+    `;
+
+    let totalMostradas = 0;
+
+    FASES_ELIMINATORIAS_JUGADOR.forEach(cfg => {
+      const partidos = eliminatorias
+        .filter(p => p.fase === cfg.fase)
+        .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+      if (!partidos.length) return;
+
+      const aparicion = configMap[`aparicion_${cfg.fase}`];
+
+      // Si no hay fecha de publicación configurada,
+      // NO se muestra al jugador.
+      if (!aparicion) return;
+
+      const fechaAparicion = getFechaConfig(aparicion);
+
+      // Si todavía no llega la fecha/hora,
+      // NO se muestra al jugador.
+      if (ahora < fechaAparicion) return;
+
+      totalMostradas++;
+
+      html += renderFaseEliminatoriaJugador(
+        cfg,
+        partidos,
+        configMap,
+        picksEliminatorias,
+        aciertosEliminatorias
+      );
+    });
+
+    if (totalMostradas === 0) {
+      contenedor.innerHTML = '';
+      return;
+    }
+
+    html += `
+        </div>
+      </div>
+    `;
+
+    contenedor.innerHTML = html;
+
+  } catch(e) {
+    console.error(e);
+
+    contenedor.innerHTML = `
+      <div class="text-center py-4" style="color:#ff6b7a;">
+        Error al cargar eliminatorias.
+      </div>
+    `;
+  }
+}
+
+function renderFaseEliminatoriaJugador(cfg, partidos, configMap, picksEliminatorias = {}, aciertosEliminatorias = {}) {
+  const limite = configMap[`fechaLimite_${cfg.fase}`]
+    ? getFechaConfig(configMap[`fechaLimite_${cfg.fase}`])
+    : null;
+
+  const cerrado = limite && new Date() > limite;
+
+  const stats = aciertosEliminatorias[cfg.fase] || {
+    aciertos: 0,
+    resultados: 0,
+    picks: 0
+  };
+
+  const tienePicks = stats.picks > 0;
+  const tieneResultados = stats.resultados > 0;
+  const modoKey = `_modoEdicion_${cfg.fase}`;
+
+  const enModoEdicion = !tienePicks || window[modoKey] === true;
+  const contraido = tienePicks && !enModoEdicion;
+
+  return `
+    <div class="elim-jugador-fase">
+
+      <div class="jornada-picks-header" onclick="toggleElimJugador('${cfg.fase}')">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="jornada-picks-titulo">
+            🏆 ${cfg.label}${tienePicks && !enModoEdicion ? ' — EN CURSO' : ' — Llena tus picks'}
+          </span>
+          <span class="jornada-aciertos-badge">
+            ${stats.aciertos}/${partidos.length} aciertos
+          </span>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+          ${renderAccionesEliminatoria(cfg.fase, cerrado, tienePicks, enModoEdicion)}
+          <span class="jornada-toggle-icon" id="toggle-elim-${cfg.fase}">
+            ${contraido ? '▼' : '▲'}
+          </span>
+        </div>
+      </div>
+
+      <div class="elim-jugador-body ${contraido ? 'contraido' : ''}" id="elim-body-${cfg.fase}">
+        ${enModoEdicion
+          ? `
+            <div class="jornada-picks-sub">
+              <span>Selecciona el equipo que avanzará</span>
+              <span class="fecha-limite-badge ${cerrado ? 'cerrada' : 'ok'}">
+                ${formatearFechaLimite(limite)}
+              </span>
+            </div>
+
+            ${partidos.map(p => renderPartidoEliminatoriaJugador(p, cfg.fase, picksEliminatorias[p.idDoc], cerrado)).join('')}
+
+            ${cerrado ? `
+              <div class="picks-bloqueado">🔒 Esta fase ya no acepta modificaciones</div>
+            ` : `
+              <div class="px-3 pb-3 text-end">
+                <button class="btn-guardar-quiniela" onclick="guardarPicksEliminatoria('${cfg.fase}')">
+                  💾 Guardar ${cfg.label}
+                </button>
+              </div>
+            `}
+          `
+          : partidos.map((p, i) => renderPickCompactoEliminatoria(p, i, picksEliminatorias)).join('')
+        }
+      </div>
+
+    </div>
+  `;
+}
+
+function renderAccionesEliminatoria(fase, cerrado, tienePicks, enModoEdicion) {
+  if (cerrado) return '';
+
+  if (enModoEdicion && !tienePicks) {
+    return `
+      <button class="btn-seleccion-auto"
+              onclick="event.stopPropagation(); seleccionAutomaticaEliminatoria('${fase}')">
+        🎲 Selección automática
+      </button>
+    `;
+  }
+
+  if (tienePicks && !enModoEdicion) {
+    return `
+      <button class="btn-modificar"
+              onclick="event.stopPropagation(); activarModoEdicionEliminatoria('${fase}')">
+        ✏️ Modificar quiniela
+      </button>
+    `;
+  }
+
+  if (enModoEdicion && tienePicks) {
+    return `
+      <button class="btn-seleccion-auto"
+              onclick="event.stopPropagation(); seleccionAutomaticaEliminatoria('${fase}')">
+        🎲 Selección automática
+      </button>
+    `;
+  }
+
+  return '';
+}
+
+function renderPartidoEliminatoriaJugador(p, fase, pickGuardado = null, cerrado = false) {
+  const flagLocal = getFlag(p.local);
+  const flagVisita = getFlag(p.visita);
+
+  return `
+    <div class="partido-pick elim-pick-card" data-partido-id="${p.idDoc}" data-fase="${fase}">
+
+      <div class="partido-pick-num">
+        Partido ${p.numero} · ${p.fecha || ''} ${p.hora || ''}
+      </div>
+
+      <div class="partido-pick-equipos">
+        <div class="partido-pick-local">
+          <span>${p.local || 'Por definir'}</span>
+          <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+        </div>
+
+        <span class="partido-pick-vs">VS</span>
+
+        <div class="partido-pick-visit">
+          <img src="https://flagcdn.com/24x18/${flagVisita}.png" class="bandera-sm">
+          <span>${p.visita || 'Por definir'}</span>
+        </div>
+      </div>
+
+      <div class="pick-btns elim-pick-options">
+        <button
+          class="btn-pick local ${pickGuardado === 'L' ? 'seleccionado local activo' : ''}"
+          ${cerrado ? 'disabled' : ''}
+          onclick="pickEliminatoria('${fase}', '${p.idDoc}', 'L', this)">
+          <img src="https://flagcdn.com/16x12/${flagLocal}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">
+          <span class="pick-nombre">Gana ${p.local}</span>
+          <span class="pick-nombre-corto">L</span>
+        </button>
+
+        <button
+          class="btn-pick visita ${pickGuardado === 'V' ? 'seleccionado visita activo' : ''}"
+          ${cerrado ? 'disabled' : ''}
+          onclick="pickEliminatoria('${fase}', '${p.idDoc}', 'V', this)">
+          <img src="https://flagcdn.com/16x12/${flagVisita}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">
+          <span class="pick-nombre">Gana ${p.visita}</span>
+          <span class="pick-nombre-corto">V</span>
+        </button>
+      </div>
+
+    </div>
+  `;
+}
+
+function renderPickCompactoEliminatoria(p, i, picksMap) {
+  const flagLocal = getFlag(p.local);
+  const flagVisit = getFlag(p.visita);
+
+  const pick = picksMap[p.idDoc] || '';
+
+  const resReal = p.ganador || '';
+  const acerto = resReal && pick && resReal === pick;
+  const fallo = resReal && pick && resReal !== pick;
+
+  const flagPick = pick === 'L' ? flagLocal : pick === 'V' ? flagVisit : null;
+
+  const nombrePick = pick === 'L'
+    ? p.local
+    : pick === 'V'
+      ? p.visita
+      : 'Sin selección';
+
+  let resultadoIcon = '';
+
+  if (acerto) {
+    resultadoIcon = `<span class="pick-resultado acerto">✓</span>`;
+  } else if (fallo) {
+    resultadoIcon = `<span class="pick-resultado fallo">✗</span>`;
+  }
+
+  return `
+    <div class="pick-compacto">
+      <table class="pick-compacto-tabla">
+        <tr>
+          <td class="pick-td-num">${i + 1}</td>
+
+          <td class="pick-td-local">
+            <div class="inner">
+              <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+              <span class="pick-compacto-nombre">${p.local}</span>
+            </div>
+          </td>
+
+          <td class="pick-td-vs">vs</td>
+
+          <td class="pick-td-visit">
+            <div class="inner">
+              <img src="https://flagcdn.com/24x18/${flagVisit}.png" class="bandera-sm">
+              <span class="pick-compacto-nombre">${p.visita}</span>
+            </div>
+          </td>
+
+          <td class="pick-td-sel">
+            <span class="pick-compacto-sel ${pick === 'L' ? 'local' : 'visita'}">
+              ${flagPick ? `<img src="https://flagcdn.com/24x18/${flagPick}.png" class="bandera-sm">` : ''}
+              <span class="pick-sel-nombre">${nombrePick}</span>
+              ${resultadoIcon}
+            </span>
+          </td>
+
+          <td class="pick-td-fecha">
+            <span class="estado-fecha-hora">${p.fecha} · ${p.hora}</span>
+            <span class="estado-estadio">${p.estadio}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+window.toggleElimJugador = function(fase) {
+  const body = document.getElementById(`elim-body-${fase}`);
+  const icon = document.getElementById(`toggle-elim-${fase}`);
+
+  if (!body) return;
+
+  body.classList.toggle('contraido');
+
+  if (icon) {
+    icon.textContent = body.classList.contains('contraido') ? '▼' : '▲';
+  }
+};
+
+window.pickEliminatoria = function(fase, idDoc, pick, btn) {
+  const card = btn.closest('.elim-pick-card');
+  if (!card) return;
+
+  card.querySelectorAll('.elim-pick-options button')
+    .forEach(b => {
+      b.classList.remove(
+        'activo',
+        'seleccionado',
+        'local',
+        'visita'
+      );
+    });
+
+  btn.classList.add(
+    'activo',
+    'seleccionado',
+    pick === 'L' ? 'local' : 'visita'
+  );
+
+  if (!window._picksEliminatorias) {
+    window._picksEliminatorias = {};
+  }
+
+  window._picksEliminatorias[idDoc] = {
+    fase,
+    pick
+  };
+};
+
+window.seleccionAutomaticaEliminatoria = function(fase) {
+  document
+    .querySelectorAll(`#elim-body-${fase} .elim-pick-card`)
+    .forEach(card => {
+      const botones = card.querySelectorAll('.elim-pick-options button');
+      if (!botones.length) return;
+
+      const elegido = botones[Math.floor(Math.random() * botones.length)];
+      elegido.click();
+    });
+};
+
+window.guardarPicksEliminatoria = async function(fase) {
+  const cards = Array.from(document.querySelectorAll(`#elim-body-${fase} .elim-pick-card`));
+
+  const pendientes = cards.filter(card =>
+    !card.querySelector('.elim-pick-options button.activo')
+  );
+
+  if (pendientes.length > 0) {
+    showToast(`⚠️ Te faltan ${pendientes.length} partidos por seleccionar.`, 'warning');
+    pendientes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  try {
+    let guardados = 0;
+
+    for (const card of cards) {
+      const partidoId = card.dataset.partidoId;
+      const btnActivo = card.querySelector('.elim-pick-options button.activo');
+
+      const botones = Array.from(card.querySelectorAll('.elim-pick-options button'));
+      const pick = botones.indexOf(btnActivo) === 0 ? 'L' : 'V';
+
+      await setDoc(doc(db, 'predicciones', `${jugador.id}_${partidoId}`), {
+        jugadorId: jugador.id,
+        jugadorNombre: jugador.nombre,
+        partidoId,
+        jornada: fase,
+        pick,
+        guardadoEn: new Date()
+      });
+
+      guardados++;
+    }
+
+    showToast(`✅ ${guardados} predicciones guardadas.`, 'success');
+
+    setTimeout(() => {
+      cargarEliminatoriasJugador();
+    }, 600);
+
+  } catch(e) {
+    console.error(e);
+    showToast('❌ Error al guardar eliminatorias.', 'error');
+  }
+};
+
+let unsubscribeEliminatoriasJugador = null;
+let unsubscribeConfigEliminatoriasJugador = null;
+
+function iniciarEliminatoriasJugadorRealtime() {
+  if (unsubscribeEliminatoriasJugador) {
+    unsubscribeEliminatoriasJugador();
+    unsubscribeEliminatoriasJugador = null;
+  }
+
+  if (unsubscribeConfigEliminatoriasJugador) {
+    unsubscribeConfigEliminatoriasJugador();
+    unsubscribeConfigEliminatoriasJugador = null;
+  }
+
+  unsubscribeEliminatoriasJugador = onSnapshot(
+    collection(db, 'eliminatorias'),
+    () => {
+      cargarEliminatoriasJugador();
+    }
+  );
+
+  unsubscribeConfigEliminatoriasJugador = onSnapshot(
+    collection(db, 'config'),
+    () => {
+      cargarEliminatoriasJugador();
+    }
+  );
+
+  cargarEliminatoriasJugador();
+}
+
+window.activarModoEdicionEliminatoria = function(fase) {
+  window[`_modoEdicion_${fase}`] = true;
+  cargarEliminatoriasJugador();
+};

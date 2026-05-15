@@ -32,7 +32,11 @@ service cloud.firestore {
                         ])
                         && request.resource.data.jugadorId is string
                         && request.resource.data.pick in ['L', 'E', 'V']
-                        && request.resource.data.jornada in ['jornada1', 'jornada2', 'jornada3'];
+                        && request.resource.data.jornada in [
+                          'jornada1', 'jornada2', 'jornada3',
+                          'dieciseisavos', 'octavos', 'cuartos',
+                          'semifinal', 'tercer', 'final'
+                        ];
 
         allow delete: if request.auth != null;
     }
@@ -52,6 +56,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+    
+    // ── ELIMINATORIAS ──
+		match /eliminatorias/{docId} {
+  		allow read: if true;
+  		allow write: if request.auth != null;
+		}
 
     // ── Bloquear todo lo demás ──
     match /{document=**} {

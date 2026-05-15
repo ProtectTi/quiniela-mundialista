@@ -1,13 +1,15 @@
 import {
   collection,
   getDocs,
+  addDoc,
   doc,
   setDoc,
+  serverTimestamp,
   deleteDoc,
   getDoc,
   query,
   where,
-  onSnapshot
+  onSnapshot,
 } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
 import {
@@ -47,6 +49,41 @@ onAuthStateChanged(auth, (user) => {
 
 // ── ESTADO GLOBAL ──
 let faseActiva = 'jornada1';
+
+const FASES_ELIMINATORIAS = {
+  '16avos': {
+    firestore: 'dieciseisavos',
+    boton: 'fase-16',
+    label: 'Dieciseisavos'
+  },
+  'octavos': {
+    firestore: 'octavos',
+    boton: 'fase-8',
+    label: 'Octavos'
+  },
+  'cuartos': {
+    firestore: 'cuartos',
+    boton: 'fase-4',
+    label: 'Cuartos'
+  },
+  'semifinal': {
+    firestore: 'semifinal',
+    boton: 'fase-sf',
+    label: 'Semifinal'
+  },
+
+  'tercer': {
+    firestore: 'tercer',
+    boton: 'fase-3',
+    label: '3er Lugar'
+  },
+
+  'final': {
+    firestore: 'final',
+    boton: 'fase-f',
+    label: 'Final'
+  }
+};
 
 // ══════════════════════════════
 // NAVBAR
@@ -460,17 +497,47 @@ window.togglePublicar = async function() {
 // PARTIDOS
 // ══════════════════════════════
 window.cargarFase = async function(fase) {
-  const fasesBloqueadas = ['16avos', 'octavos', 'cuartos', 'semifinal', 'final'];
-  if (fasesBloqueadas.includes(fase)) return;
+  if (FASES_ELIMINATORIAS[fase]) {
+    const btn = document.getElementById(FASES_ELIMINATORIAS[fase].boton);
+
+    if (btn && btn.classList.contains('bloqueada')) {
+      alert('🔒 Esta eliminatoria aún no está publicada.');
+      return;
+    }
+
+    faseActiva = fase;
+
+    document.querySelectorAll('.btn-fase').forEach(b => b.classList.remove('seleccionada'));
+
+    if (btn) btn.classList.add('seleccionada');
+
+    await cargarEliminatoria(fase);
+    return;
+  }
 
   faseActiva = fase;
 
   document.querySelectorAll('.btn-fase').forEach(b => b.classList.remove('seleccionada'));
 
-  const mapaBotones = { jornada1: 'fase-j1', jornada2: 'fase-j2', jornada3: 'fase-j3' };
+  const mapaBotones = {
+    jornada1: 'fase-j1',
+    jornada2: 'fase-j2',
+    jornada3: 'fase-j3'
+  };
+
   const btnActivo = document.getElementById(mapaBotones[fase]);
 
   if (btnActivo) btnActivo.classList.add('seleccionada');
+
+  const acciones = document.querySelector('.partidos-acciones');
+
+  if (acciones) {
+    acciones.style.display = 'flex';
+    acciones.innerHTML = `
+      <button class="btn-guardar-todo" onclick="guardarTodo()">Guardar todo</button>
+      <button class="btn-aleatorio" onclick="resultadosAleatorios()">🌐 Resultados aleatorios (prueba)</button>
+    `;
+  }
 
   const partidos   = PARTIDOS_MUNDIAL[fase];
   const contenedor = document.getElementById('lista-partidos');
@@ -571,6 +638,310 @@ window.cargarFase = async function(fase) {
   });
 
   contenedor.innerHTML = html;
+};
+
+async function cargarEliminatoria(fase) {
+  const config = FASES_ELIMINATORIAS[fase];
+  const contenedor = document.getElementById('lista-partidos');
+
+  const acciones = document.querySelector('.partidos-acciones');
+
+  if (acciones) {
+    acciones.style.display = 'flex';
+    acciones.innerHTML = `
+      <button class="btn-guardar-todo" onclick="guardarTodoEliminatoria()">Guardar todo</button>
+      <button class="btn-aleatorio" onclick="resultadosAleatoriosEliminatoria()">🌐 Resultados aleatorios (prueba)</button>
+    `;
+  }
+
+  contenedor.innerHTML = `
+    <div class="text-center py-5" style="color:var(--text-muted);">
+      Cargando ${config.label}...
+    </div>
+  `;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', config.firestore))
+    );
+
+    const partidos = snap.docs
+      .map(d => ({ idDoc: d.id, ...d.data() }))
+      .sort((a, b) => (a.numero || 0) - (b.numero || 0));
+
+    document.getElementById('partidos-count').textContent =
+      `${partidos.length} PARTIDOS`;
+
+    if (!partidos.length) {
+      contenedor.innerHTML = `
+        <div class="panel-card text-center" style="color:var(--text-muted);">
+          No hay partidos publicados para ${config.label}.
+        </div>
+      `;
+      return;
+    }
+
+    contenedor.innerHTML = `
+      <div class="row g-3">
+        ${partidos.map(p => renderEliminatoriaCard(p)).join('')}
+      </div>
+    `;
+
+  } catch(e) {
+    console.error(e);
+
+    contenedor.innerHTML = `
+      <div class="panel-card text-center" style="color:#ff6b7a;">
+        Error al cargar ${config.label}.
+      </div>
+    `;
+  }
+}
+
+function iniciarEliminatoriasListenerAdmin() {
+  onSnapshot(collection(db, 'eliminatorias'), (snap) => {
+    const fasesPublicadas = new Set();
+
+    snap.docs.forEach(d => {
+      const fase = d.data().fase;
+      if (fase) fasesPublicadas.add(fase);
+    });
+
+    Object.entries(FASES_ELIMINATORIAS).forEach(([faseKey, cfg]) => {
+      const btn = document.getElementById(cfg.boton);
+      if (!btn) return;
+
+      const publicada = fasesPublicadas.has(cfg.firestore);
+
+      btn.classList.toggle('bloqueada', !publicada);
+      btn.classList.toggle('pendiente', publicada);
+
+      if (publicada) {
+        btn.innerHTML = `🟢 ${cfg.label}`;
+      } else {
+        btn.innerHTML = `⚪ ${cfg.label}`;
+      }
+    });
+    if (document.getElementById('sec-grupos')?.classList.contains('active')) {
+      renderGruposAdminRealtime();
+    }
+  });
+}
+
+function renderEliminatoriaCard(p) {
+  const flagLocal = BANDERAS[p.local] || 'mx';
+  const flagVisita = BANDERAS[p.visita] || 'mx';
+
+  const ml = p.marcadorLocal ?? 0;
+  const mv = p.marcadorVisita ?? 0;
+  const ganador = p.ganador || '';
+
+  return `
+    <div class="${faseActiva === 'cuartos' ? 'col-12 col-md-6 col-xl-3': faseActiva === 'semifinal' ? 'col-12 col-lg-6' : 'col-12 col-md-6 col-xl-4'}">
+      <div class="dieciseisavos-card">
+        <div class="dieciseisavos-card-top">
+          <span>Partido n.º ${p.numero}</span>
+          <strong>${p.hora}</strong>
+        </div>
+
+        <div class="dieciseisavos-teams">
+
+          <div class="dieciseisavos-team">
+            <span class="slot-label">${p.slotLocal || ''}</span>
+            <div class="dieciseisavos-team-main">
+              <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+              <strong>${p.local || 'Por definir'}</strong>
+            </div>
+            <small>Local</small>
+          </div>
+
+          <div class="elim-marcador">
+            <input type="number" min="0" max="99" value="${ml}" id="elim-local-${p.idDoc}">
+            <span>:</span>
+            <input type="number" min="0" max="99" value="${mv}" id="elim-visita-${p.idDoc}">
+          </div>
+
+          <div class="dieciseisavos-team">
+            <span class="slot-label">${p.slotVisita || ''}</span>
+            <div class="dieciseisavos-team-main">
+              <img src="https://flagcdn.com/24x18/${flagVisita}.png" class="bandera-sm">
+              <strong>${p.visita || 'Por definir'}</strong>
+            </div>
+            <small>Visitante</small>
+          </div>
+
+        </div>
+
+        <div class="elim-ganador">
+          <button class="${ganador === 'L' ? 'activo' : ''}" onclick="setGanadorEliminatoria('${p.idDoc}', 'L')">
+            Gana ${p.local}
+          </button>
+
+          <button class="${ganador === 'V' ? 'activo' : ''}" onclick="setGanadorEliminatoria('${p.idDoc}', 'V')">
+            Gana ${p.visita}
+          </button>
+        </div>
+
+        <button class="btn-guardar-elim" onclick="guardarResultadoEliminatoria('${p.idDoc}')">
+          Guardar resultado
+        </button>
+
+        <div class="dieciseisavos-info">
+          ${p.fecha}
+          <span>·</span>
+          ${p.estadio} (${p.ciudad})
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.setGanadorEliminatoria = function(idDoc, ganador) {
+  document
+    .querySelectorAll(`[onclick*="setGanadorEliminatoria('${idDoc}'"]`)
+    .forEach(btn => btn.classList.remove('activo'));
+
+  const btn = document.querySelector(`[onclick="setGanadorEliminatoria('${idDoc}', '${ganador}')"]`);
+  if (btn) btn.classList.add('activo');
+
+  window[`_ganador_${idDoc}`] = ganador;
+};
+
+window.guardarResultadoEliminatoria = async function(idDoc) {
+  const inputLocal = document.getElementById(`elim-local-${idDoc}`);
+  const inputVisita = document.getElementById(`elim-visita-${idDoc}`);
+
+  const marcadorLocal = Math.max(0, parseInt(inputLocal?.value) || 0);
+  const marcadorVisita = Math.max(0, parseInt(inputVisita?.value) || 0);
+
+  let ganador = window[`_ganador_${idDoc}`];
+
+  const btnActivo = document.querySelector(`[onclick*="setGanadorEliminatoria('${idDoc}'"].activo`);
+  if (!ganador && btnActivo) {
+    ganador = btnActivo.textContent.includes('Gana') ? null : null;
+  }
+
+  if (!ganador) {
+    alert('⚠️ Selecciona quién ganó el partido.');
+    return;
+  }
+
+  try {
+    await setDoc(doc(db, 'eliminatorias', idDoc), {
+      marcadorLocal,
+      marcadorVisita,
+      ganador,
+      actualizadoEn: new Date()
+    }, { merge: true });
+
+    alert('✅ Resultado guardado correctamente.');
+
+    if (FASES_ELIMINATORIAS[faseActiva]) {
+      await cargarEliminatoria(faseActiva);
+    }
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al guardar resultado.');
+  }
+};
+
+window.resultadosAleatoriosEliminatoria = function() {
+  document.querySelectorAll('.dieciseisavos-card').forEach(card => {
+    const btnGuardar = card.querySelector('.btn-guardar-elim');
+
+    if (!btnGuardar) return;
+
+    const onclick = btnGuardar.getAttribute('onclick') || '';
+    const idDoc = onclick.match(/'([^']+)'/)?.[1];
+
+    if (!idDoc) return;
+
+    let gl = Math.floor(Math.random() * 6);
+    let gv = Math.floor(Math.random() * 6);
+
+    // En eliminatorias no puede quedar empate
+    if (gl === gv) {
+      Math.random() > 0.5 ? gl++ : gv++;
+    }
+
+    const inputLocal = document.getElementById(`elim-local-${idDoc}`);
+    const inputVisita = document.getElementById(`elim-visita-${idDoc}`);
+
+    if (inputLocal) inputLocal.value = gl;
+    if (inputVisita) inputVisita.value = gv;
+
+    const ganador = gl > gv ? 'L' : 'V';
+
+    window.setGanadorEliminatoria(idDoc, ganador);
+  });
+};
+
+window.guardarTodoEliminatoria = async function() {
+  const btn = document.querySelector('.btn-guardar-todo');
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+  }
+
+  try {
+    const cards = Array.from(document.querySelectorAll('.dieciseisavos-card'));
+    let guardados = 0;
+
+    for (const card of cards) {
+      const btnGuardar = card.querySelector('.btn-guardar-elim');
+
+      if (!btnGuardar) continue;
+
+      const onclick = btnGuardar.getAttribute('onclick') || '';
+      const idDoc = onclick.match(/'([^']+)'/)?.[1];
+
+      if (!idDoc) continue;
+
+      const inputLocal = document.getElementById(`elim-local-${idDoc}`);
+      const inputVisita = document.getElementById(`elim-visita-${idDoc}`);
+
+      const marcadorLocal = Math.max(0, parseInt(inputLocal?.value) || 0);
+      const marcadorVisita = Math.max(0, parseInt(inputVisita?.value) || 0);
+
+      const ganador = window[`_ganador_${idDoc}`];
+
+      if (!ganador) continue;
+
+      await setDoc(doc(db, 'eliminatorias', idDoc), {
+        marcadorLocal,
+        marcadorVisita,
+        ganador,
+        actualizadoEn: new Date()
+      }, { merge: true });
+
+      guardados++;
+    }
+
+    if (btn) {
+      btn.textContent = `✅ Guardado (${guardados})`;
+
+      setTimeout(() => {
+        btn.textContent = 'Guardar todo';
+        btn.disabled = false;
+      }, 2200);
+    }
+
+    if (FASES_ELIMINATORIAS[faseActiva]) {
+      await cargarEliminatoria(faseActiva);
+    }
+
+  } catch(e) {
+    console.error(e);
+
+    if (btn) {
+      btn.textContent = '❌ Error';
+      btn.disabled = false;
+    }
+
+    alert('❌ Error al guardar eliminatorias.');
+  }
 };
 
 window.setLEV = function(id, resultado) {
@@ -729,10 +1100,21 @@ async function renderGruposAdminRealtime() {
   if (!contenedor) return;
 
   try {
-    const resSnap = await getDocs(collection(db, 'resultados'));
-    const resultados = resSnap.docs.map(d => d.data());
+    const [resSnap, elimSnap] = await Promise.all([
+      getDocs(collection(db, 'resultados')),
+      getDocs(collection(db, 'eliminatorias'))
+    ]);
 
-    contenedor.innerHTML = renderGruposHtml(resultados);
+    const resultados = resSnap.docs.map(d => d.data());
+    const eliminatorias = elimSnap.docs.map(d => ({
+      idDoc: d.id,
+      ...d.data()
+    }));
+
+    contenedor.innerHTML = `
+      ${renderGruposHtml(resultados)}
+      ${renderClasificadosYDieciseisavosHtml(resultados, eliminatorias)}
+    `;
   } catch(e) {
     console.error('Error realtime grupos admin:', e);
 
@@ -746,8 +1128,14 @@ async function renderGruposAdminRealtime() {
 
 function calcularGrupos(resultados) {
   const stats = {};
+  const ordenEquipos = {};
+  let orden = 1;
 
   const iniciar = (equipo, grupo) => {
+    if (!ordenEquipos[equipo]) {
+      ordenEquipos[equipo] = orden++;
+    }
+
     if (!stats[equipo]) {
       stats[equipo] = {
         grupo,
@@ -756,11 +1144,21 @@ function calcularGrupos(resultados) {
         pe: 0,
         pp: 0,
         gf: 0,
-        gc: 0
+        gc: 0,
+        orden: ordenEquipos[equipo]
       };
     }
   };
 
+  // Primero cargamos equipos en el orden real del calendario
+  ['jornada1', 'jornada2', 'jornada3'].forEach(jornada => {
+    (PARTIDOS_MUNDIAL[jornada] || []).forEach(p => {
+      iniciar(p.local, p.grupo);
+      iniciar(p.visitante, p.grupo);
+    });
+  });
+
+  // Luego aplicamos resultados
   resultados.forEach(r => {
     if (!r.local || !r.visitante || r.golesLocal === undefined) return;
 
@@ -791,13 +1189,6 @@ function calcularGrupos(resultados) {
     }
   });
 
-  ['jornada1', 'jornada2', 'jornada3'].forEach(jornada => {
-    (PARTIDOS_MUNDIAL[jornada] || []).forEach(p => {
-      iniciar(p.local, p.grupo);
-      iniciar(p.visitante, p.grupo);
-    });
-  });
-
   const grupos = {};
 
   Object.entries(stats).forEach(([equipo, s]) => {
@@ -813,7 +1204,7 @@ function calcularGrupos(resultados) {
       pts(b) - pts(a) ||
       dg(b) - dg(a) ||
       b.gf - a.gf ||
-      a.equipo.localeCompare(b.equipo, 'es', { sensitivity: 'base' })
+      a.orden - b.orden
     );
   });
 
@@ -898,6 +1289,877 @@ function renderEquipoGrupoRow(e, index) {
 }
 
 // ══════════════════════════════
+// CLASIFICADOS + DIECISEISAVOS
+// ══════════════════════════════
+function getPtsGrupo(e) {
+  return e.pg * 3 + e.pe;
+}
+
+function getDgGrupo(e) {
+  return e.gf - e.gc;
+}
+
+function ordenarClasificacion(a, b) {
+  return getPtsGrupo(b) - getPtsGrupo(a) ||
+         getDgGrupo(b) - getDgGrupo(a) ||
+         b.gf - a.gf ||
+         a.orden - b.orden;
+}
+
+function calcularClasificados(resultados) {
+  const grupos = calcularGrupos(resultados);
+
+  const primeros = [];
+  const segundos = [];
+  const terceros = [];
+
+  Object.keys(grupos).sort().forEach(grupo => {
+    const equipos = [...grupos[grupo]].sort(ordenarClasificacion);
+
+    if (equipos[0]) primeros.push({ ...equipos[0], grupo, posicion: 1 });
+    if (equipos[1]) segundos.push({ ...equipos[1], grupo, posicion: 2 });
+    if (equipos[2]) terceros.push({ ...equipos[2], grupo, posicion: 3 });
+  });
+
+  const mejoresTerceros = [...terceros]
+    .sort(ordenarClasificacion)
+    .slice(0, 8)
+    .map(e => ({ ...e, clasificado: true }));
+
+  const keySet = new Set(mejoresTerceros.map(e => `${e.grupo}-${e.equipo}`));
+
+  const tercerosConEstado = terceros
+    .sort(ordenarClasificacion)
+    .map(e => ({
+      ...e,
+      clasificado: keySet.has(`${e.grupo}-${e.equipo}`)
+    }));
+
+  return {
+    primeros,
+    segundos,
+    terceros: tercerosConEstado,
+    mejoresTerceros
+  };
+}
+
+function renderClasificadosYDieciseisavosHtml(resultados, eliminatorias = []) {
+  const clasificados = calcularClasificados(resultados);
+
+  const totalPartidosGrupo = ['jornada1', 'jornada2', 'jornada3']
+    .reduce((acc, j) => acc + (PARTIDOS_MUNDIAL[j]?.length || 0), 0);
+
+  const resultadosGrupo = resultados.filter(r =>
+    ['jornada1', 'jornada2', 'jornada3'].includes(r.jornada)
+  ).length;
+
+  return `
+    <div class="clasificados-section mt-4">
+
+      <div class="clasificados-header">
+        <div>
+          <h3>Clasificados a Dieciseisavos</h3>
+          <p>${resultadosGrupo}/${totalPartidosGrupo} resultados de fase de grupos capturados</p>
+        </div>
+
+        <span class="clasificados-badge">
+          ${resultadosGrupo >= totalPartidosGrupo ? 'Fase completa' : 'Proyección en vivo'}
+        </span>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-lg-4">
+          ${renderBloqueClasificados('1° lugar de grupo', clasificados.primeros, 'oro')}
+        </div>
+
+        <div class="col-12 col-lg-4">
+          ${renderBloqueClasificados('2° lugar de grupo', clasificados.segundos, 'plata')}
+        </div>
+
+        <div class="col-12 col-lg-4">
+          ${renderBloqueTerceros(clasificados.terceros)}
+        </div>
+      </div>
+
+      ${renderPreviewDieciseisavos(clasificados)}
+      ${renderPreviewOctavos(eliminatorias)}
+      ${renderPreviewCuartos(eliminatorias)}
+      ${renderPreviewSemifinales(eliminatorias)}
+      ${renderPreviewTercerLugar(eliminatorias)}
+      ${renderPreviewFinal(eliminatorias)}
+    </div>
+  `;
+}
+
+function renderBloqueClasificados(titulo, equipos, tipo) {
+  return `
+    <div class="clasificados-card">
+      <div class="clasificados-card-title ${tipo}">
+        ${titulo}
+      </div>
+
+      <div class="clasificados-list">
+        ${equipos.map(e => renderClasificadoRow(e, true)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBloqueTerceros(terceros) {
+  return `
+    <div class="clasificados-card">
+      <div class="clasificados-card-title bronce">
+        8 mejores 3° lugares
+      </div>
+
+      <div class="clasificados-list">
+        ${terceros.map(e => renderClasificadoRow(e, e.clasificado)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderClasificadoRow(e, clasificado) {
+  const flag = BANDERAS[e.equipo] || 'mx';
+  const pts = getPtsGrupo(e);
+  const dg  = getDgGrupo(e);
+
+  return `
+    <div class="clasificado-row ${clasificado ? 'clasifica' : 'no-clasifica'}">
+      <div class="clasificado-equipo">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <span>${e.equipo}</span>
+        <small>Grupo ${e.grupo}</small>
+      </div>
+
+      <div class="clasificado-stats">
+        <span>${pts} pts</span>
+        <small>DG ${dg > 0 ? '+' + dg : dg}</small>
+      </div>
+    </div>
+  `;
+}
+
+function buscarPorGrupo(lista, grupo) {
+  return lista.find(e => e.grupo === grupo) || null;
+}
+
+function getDieciseisavosOficiales() {
+  return [
+    { id: 73, local: '2A', visita: '2B', hora: '13:00', fecha: '28 Jun 2026', estadio: 'SoFi Stadium, Inglewood, California, EUA', ciudad: 'Los Ángeles' },
+    { id: 76, local: '1C', visita: '2F', hora: '11:00', fecha: '29 Jun 2026', estadio: 'NRG Stadium, Houston, Texas, EUA', ciudad: 'Houston' },
+    { id: 74, local: '1E', visita: '3ABCDF', hora: '14:30', fecha: '29 Jun 2026', estadio: 'Gillette Stadium, Foxborough, Massachusetts, EUA', ciudad: 'Boston' },
+    { id: 75, local: '1F', visita: '2C', hora: '19:00', fecha: '29 Jun 2026', estadio: 'Estadio BBVA, Guadalupe, México', ciudad: 'Monterrey' },
+    { id: 78, local: '2E', visita: '2I', hora: '11:00', fecha: '30 Jun 2026', estadio: 'AT&T Stadium, Arlington, Texas, EUA', ciudad: 'Dallas' },
+    { id: 77, local: '1I', visita: '3CDFGH', hora: '15:00', fecha: '30 Jun 2026', estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA', ciudad: 'Nueva York/Nueva Jersey' },
+    { id: 79, local: '1A', visita: '3CEFHI', hora: '19:00', fecha: '30 Jun 2026', estadio: 'Estadio Banorte, Mexico City, México', ciudad: 'Ciudad de México' },
+    { id: 80, local: '1L', visita: '3EHIJK', hora: '10:00', fecha: '01 Jul 2026', estadio: 'Mercedes-Benz Stadium, Atlanta, Georgia, EUA', ciudad: 'Atlanta' },
+    { id: 82, local: '1G', visita: '3AEHIJ', hora: '14:00', fecha: '01 Jul 2026', estadio: 'Lumen Field, Seattle, Washington, EUA', ciudad: 'Seattle' },
+    { id: 81, local: '1D', visita: '3BEFIJ', hora: '18:00', fecha: '01 Jul 2026', estadio: "Levi's Stadium, Santa Clara, California, EUA", ciudad: 'Área de la Bahía' },
+    { id: 84, local: '1H', visita: '2J', hora: '13:00', fecha: '02 Jul 2026', estadio: 'SoFi Stadium, Inglewood, California, EUA', ciudad: 'Los Ángeles' },
+    { id: 83, local: '2K', visita: '2L', hora: '17:00', fecha: '02 Jul 2026', estadio: 'BMO Field, Toronto, Canadá', ciudad: 'Toronto' },
+    { id: 85, local: '1B', visita: '3EFGIJ', hora: '21:00', fecha: '02 Jul 2026', estadio: 'BC Place, Vancouver, Canadá', ciudad: 'Vancouver' },
+    { id: 88, local: '2D', visita: '2G', hora: '12:00', fecha: '03 Jul 2026', estadio: 'AT&T Stadium, Arlington, Texas, EUA', ciudad: 'Dallas' },
+    { id: 86, local: '1J', visita: '2H', hora: '16:00', fecha: '03 Jul 2026', estadio: 'Hard Rock Stadium, Miami Gardens, Florida, EUA', ciudad: 'Miami' },
+    { id: 87, local: '1K', visita: '3DEIJL', hora: '19:30', fecha: '03 Jul 2026', estadio: 'GEHA Field at Arrowhead Stadium, Kansas City, Missouri, EUA', ciudad: 'Kansas City' }
+  ];
+}
+
+function asignarMejoresTerceros(partidos, clasificados) {
+  const terceros = clasificados.mejoresTerceros || [];
+
+  const slots = partidos
+    .flatMap(p => [p.local, p.visita])
+    .filter(slot => slot.startsWith('3'));
+
+  const asignaciones = {};
+  const usados = new Set();
+
+  function backtrack(index) {
+    if (index >= slots.length) return true;
+
+    const slot = slots[index];
+    const permitidos = slot.replace('3', '').split('');
+
+    for (const tercero of terceros) {
+      if (usados.has(tercero.grupo)) continue;
+      if (!permitidos.includes(tercero.grupo)) continue;
+
+      asignaciones[slot] = tercero;
+      usados.add(tercero.grupo);
+
+      if (backtrack(index + 1)) return true;
+
+      usados.delete(tercero.grupo);
+      delete asignaciones[slot];
+    }
+
+    return false;
+  }
+
+  backtrack(0);
+
+  return asignaciones;
+}
+
+function resolverSlotDieciseisavos(slot, clasificados, tercerosAsignados) {
+  if (slot.startsWith('1')) {
+    return buscarPorGrupo(clasificados.primeros, slot.replace('1', ''));
+  }
+
+  if (slot.startsWith('2')) {
+    return buscarPorGrupo(clasificados.segundos, slot.replace('2', ''));
+  }
+
+  if (slot.startsWith('3')) {
+    return tercerosAsignados[slot] || {
+      equipo: `Mejor 3° ${slot.replace('3', '').split('').join('/')}`,
+      grupo: slot.replace('3', ''),
+      posicion: 3,
+      placeholder: true
+    };
+  }
+
+  return null;
+}
+
+function renderPreviewDieciseisavos(clasificados) {
+  const partidosBase = getDieciseisavosOficiales();
+  const tercerosAsignados = asignarMejoresTerceros(partidosBase, clasificados);
+
+  const partidos = partidosBase.map(p => ({
+    ...p,
+    equipoLocal: resolverSlotDieciseisavos(p.local, clasificados, tercerosAsignados),
+    equipoVisita: resolverSlotDieciseisavos(p.visita, clasificados, tercerosAsignados)
+  }));
+
+  return `
+    <div class="dieciseisavos-preview mt-4">
+      <div class="dieciseisavos-header">
+        <div>
+          <h3>Vista previa — Dieciseisavos</h3>
+          <p>Cruces proyectados con los clasificados actuales</p>
+          <button class="btn-generar-dieciseisavos"
+                  onclick="window.generarDieciseisavos()">
+            Generar dieciseisavos
+          </button>
+        </div>
+
+        <span class="clasificados-badge">Proyección automática</span>
+      </div>
+
+      <div class="row g-3 dieciseisavos-grid">
+        ${partidos.map(p => renderPartidoDieciseisavos(p)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderPartidoDieciseisavos(p) {
+  return `
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="dieciseisavos-card">
+        <div class="dieciseisavos-card-top">
+          <span>Partido n.º ${p.id}</span>
+          <strong>${p.hora}</strong>
+        </div>
+
+        <div class="dieciseisavos-teams">
+          ${renderSlotDieciseisavos(p.local, p.equipoLocal)}
+
+          <div class="dieciseisavos-vs">VS</div>
+
+          ${renderSlotDieciseisavos(p.visita, p.equipoVisita)}
+        </div>
+
+        <div class="dieciseisavos-info">
+          ${p.fecha}
+          <span>·</span>
+          ${p.estadio} (${p.ciudad})
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSlotDieciseisavos(slot, equipo) {
+  if (!equipo) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>Por definir</strong>
+        </div>
+        <small>Sin clasificado todavía</small>
+      </div>
+    `;
+  }
+
+  if (equipo.placeholder) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>${equipo.equipo}</strong>
+        </div>
+        <small>Asignación pendiente</small>
+      </div>
+    `;
+  }
+
+  const flag = BANDERAS[equipo.equipo] || 'mx';
+
+  return `
+    <div class="dieciseisavos-team">
+      <span class="slot-label">${slot}</span>
+
+      <div class="dieciseisavos-team-main">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <strong>${equipo.equipo}</strong>
+      </div>
+
+      <small>${equipo.posicion}° Grupo ${equipo.grupo}</small>
+    </div>
+  `;
+}
+
+// ══════════════════════════════
+// PREVIEW OCTAVOS FIFA
+// ══════════════════════════════
+function getOctavosOficialesPreview() {
+  return [
+    { numero: 90, local: 'W73', visita: 'W75', hora: '11:00', fecha: '04 Jul 2026', estadio: 'NRG Stadium, Houston, Texas, EUA', ciudad: 'Houston' },
+    { numero: 89, local: 'W74', visita: 'W77', hora: '15:00', fecha: '04 Jul 2026', estadio: 'Lincoln Financial Field, Philadelphia, Pennsylvania, EUA', ciudad: 'Filadelfia' },
+    { numero: 91, local: 'W76', visita: 'W78', hora: '14:00', fecha: '05 Jul 2026', estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA', ciudad: 'Nueva York/Nueva Jersey' },
+    { numero: 92, local: 'W79', visita: 'W80', hora: '18:00', fecha: '05 Jul 2026', estadio: 'Estadio Banorte, Mexico City, México', ciudad: 'Ciudad de México' },
+    { numero: 93, local: 'W83', visita: 'W84', hora: '13:00', fecha: '06 Jul 2026', estadio: 'AT&T Stadium, Arlington, Texas, EUA', ciudad: 'Dallas' },
+    { numero: 94, local: 'W81', visita: 'W82', hora: '18:00', fecha: '06 Jul 2026', estadio: 'Lumen Field, Seattle, Washington, EUA', ciudad: 'Seattle' },
+    { numero: 95, local: 'W86', visita: 'W88', hora: '10:00', fecha: '07 Jul 2026', estadio: 'Mercedes-Benz Stadium, Atlanta, Georgia, EUA', ciudad: 'Atlanta' },
+    { numero: 96, local: 'W85', visita: 'W87', hora: '14:00', fecha: '07 Jul 2026', estadio: 'BC Place, Vancouver, Canadá', ciudad: 'Vancouver' }
+  ];
+}
+
+function getGanadorDieciseisavos(eliminatorias, numero) {
+  const partido = eliminatorias.find(p =>
+    p.fase === 'dieciseisavos' && Number(p.numero) === Number(numero)
+  );
+
+  if (!partido || !partido.ganador) return null;
+
+  const equipo = partido.ganador === 'L'
+    ? partido.local
+    : partido.visita;
+
+  return equipo || null;
+}
+
+function renderPreviewOctavos(eliminatorias = []) {
+  const partidos = getOctavosOficialesPreview().map(p => {
+    const numLocal = Number(p.local.replace('W', ''));
+    const numVisita = Number(p.visita.replace('W', ''));
+
+    return {
+      ...p,
+      equipoLocal: getGanadorDieciseisavos(eliminatorias, numLocal),
+      equipoVisita: getGanadorDieciseisavos(eliminatorias, numVisita)
+    };
+  });
+
+  return `
+    <div class="dieciseisavos-preview mt-4">
+      <div class="dieciseisavos-header">
+        <div>
+          <h3>Vista previa — Octavos</h3>
+          <p>Cruces oficiales FIFA según ganadores de dieciseisavos</p>
+
+          <button class="btn-generar-octavos"
+                  onclick="window.generarOctavos()">
+            Generar octavos
+          </button>
+        </div>
+
+        <span class="clasificados-badge">Después de dieciseisavos</span>
+      </div>
+
+      <div class="row g-3 dieciseisavos-grid">
+        ${partidos.map(p => renderPartidoOctavosPreview(p)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderPartidoOctavosPreview(p) {
+  return `
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="dieciseisavos-card">
+        <div class="dieciseisavos-card-top">
+          <span>Partido n.º ${p.numero}</span>
+          <strong>${p.hora}</strong>
+        </div>
+
+        <div class="dieciseisavos-teams">
+          ${renderSlotOctavosPreview(p.local, p.equipoLocal)}
+
+          <div class="dieciseisavos-vs">VS</div>
+
+          ${renderSlotOctavosPreview(p.visita, p.equipoVisita)}
+        </div>
+
+        <div class="dieciseisavos-info">
+          ${p.fecha}
+          <span>·</span>
+          ${p.estadio} (${p.ciudad})
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSlotOctavosPreview(slot, equipo) {
+  if (!equipo) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>Ganador ${slot.replace('W', 'P.')}</strong>
+        </div>
+
+        <small>Se define en dieciseisavos</small>
+      </div>
+    `;
+  }
+
+  const flag = BANDERAS[equipo] || 'mx';
+
+  return `
+    <div class="dieciseisavos-team">
+      <span class="slot-label">${slot}</span>
+
+      <div class="dieciseisavos-team-main">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <strong>${equipo}</strong>
+      </div>
+
+      <small>Ganador ${slot.replace('W', 'P.')}</small>
+    </div>
+  `;
+}
+
+function getGanadorOctavos(eliminatorias, numero) {
+  const partido = eliminatorias.find(p =>
+    p.fase === 'octavos' && Number(p.numero) === Number(numero)
+  );
+
+  if (!partido || !partido.ganador) return null;
+
+  return partido.ganador === 'L'
+    ? partido.local
+    : partido.visita;
+}
+
+// ══════════════════════════════
+// PREVIEW CUARTOS FIFA
+// ══════════════════════════════
+function getCuartosPreview() {
+  return [
+    {
+      numero: 97,
+      local: 'W89',
+      visita: 'W90',
+      hora: '14:00',
+      estadio: 'Gillette Stadium',
+      ciudad: 'Boston'
+    },
+
+    {
+      numero: 98,
+      local: 'W93',
+      visita: 'W94',
+      hora: '13:00',
+      estadio: 'SoFi Stadium',
+      ciudad: 'Los Ángeles'
+    },
+
+    {
+      numero: 99,
+      local: 'W91',
+      visita: 'W92',
+      hora: '15:00',
+      estadio: 'Hard Rock Stadium',
+      ciudad: 'Miami'
+    },
+
+    {
+      numero: 100,
+      local: 'W95',
+      visita: 'W96',
+      hora: '19:00',
+      estadio: 'Arrowhead Stadium',
+      ciudad: 'Kansas City'
+    }
+  ];
+}
+
+function renderPreviewCuartos(eliminatorias = []) {
+  const partidos = getCuartosPreview().map(p => {
+    const numLocal = Number(p.local.replace('W', ''));
+    const numVisita = Number(p.visita.replace('W', ''));
+
+    return {
+      ...p,
+      equipoLocal: getGanadorOctavos(eliminatorias, numLocal),
+      equipoVisita: getGanadorOctavos(eliminatorias, numVisita)
+    };
+  });
+
+  return `
+    <div class="dieciseisavos-preview mt-4">
+
+      <div class="dieciseisavos-header">
+
+        <div>
+          <h3>Vista previa — Cuartos</h3>
+
+          <p>
+            Cruces oficiales FIFA según ganadores de octavos
+          </p>
+
+          <button class="btn-generar-cuartos"
+                  onclick="window.generarCuartos()">
+            Generar cuartos
+          </button>
+        </div>
+
+        <span class="clasificados-badge">
+          Después de octavos
+        </span>
+
+      </div>
+
+      <div class="row g-3 dieciseisavos-grid">
+
+        ${partidos.map(p => `
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="dieciseisavos-card">
+
+              <div class="dieciseisavos-card-top">
+                <span>Partido n.º ${p.numero}</span>
+                <strong>${p.hora}</strong>
+              </div>
+
+              <div class="dieciseisavos-teams">
+                ${renderSlotCuartosPreview(p.local, p.equipoLocal)}
+
+                <div class="dieciseisavos-vs">VS</div>
+
+                ${renderSlotCuartosPreview(p.visita, p.equipoVisita)}
+              </div>
+
+              <div class="dieciseisavos-info">
+                Cuartos de final
+                <span>·</span>
+                ${p.estadio} (${p.ciudad})
+              </div>
+
+            </div>
+          </div>
+        `).join('')}
+
+      </div>
+
+    </div>
+  `;
+}
+
+function renderSlotCuartosPreview(slot, equipo) {
+  if (!equipo) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>Ganador ${slot.replace('W', 'P.')}</strong>
+        </div>
+
+        <small>Se define en octavos</small>
+      </div>
+    `;
+  }
+
+  const flag = BANDERAS[equipo] || 'mx';
+
+  return `
+    <div class="dieciseisavos-team">
+      <span class="slot-label">${slot}</span>
+
+      <div class="dieciseisavos-team-main">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <strong>${equipo}</strong>
+      </div>
+
+      <small>Ganador ${slot.replace('W', 'P.')}</small>
+    </div>
+  `;
+}
+
+function getSemifinalesPreview() {
+  return [
+    {
+      numero: 101,
+      local: 'W97',
+      visita: 'W98',
+      hora: '18:00',
+      fecha: '14 Jul 2026',
+      estadio: 'AT&T Stadium, Arlington, Texas, EUA',
+      ciudad: 'Dallas'
+    },
+    {
+      numero: 102,
+      local: 'W99',
+      visita: 'W100',
+      hora: '18:00',
+      fecha: '15 Jul 2026',
+      estadio: 'Mercedes-Benz Stadium, Atlanta, Georgia, EUA',
+      ciudad: 'Atlanta'
+    }
+  ];
+}
+
+function getGanadorCuartos(eliminatorias, numero) {
+  const partido = eliminatorias.find(p =>
+    p.fase === 'cuartos' && Number(p.numero) === Number(numero)
+  );
+
+  if (!partido || !partido.ganador) return null;
+
+  return partido.ganador === 'L'
+    ? partido.local
+    : partido.visita;
+}
+
+function renderPreviewSemifinales(eliminatorias = []) {
+  const partidos = getSemifinalesPreview().map(p => {
+    const numLocal = Number(p.local.replace('W', ''));
+    const numVisita = Number(p.visita.replace('W', ''));
+
+    return {
+      ...p,
+      equipoLocal: getGanadorCuartos(eliminatorias, numLocal),
+      equipoVisita: getGanadorCuartos(eliminatorias, numVisita)
+    };
+  });
+
+  return `
+    <div class="dieciseisavos-preview mt-4">
+      <div class="dieciseisavos-header">
+        <div>
+          <h3>Vista previa — Semifinales</h3>
+          <p>Cruces oficiales FIFA según ganadores de cuartos</p>
+
+          <button class="btn-generar-semifinales"
+                  onclick="window.generarSemifinales()">
+            Generar semifinales
+          </button>
+        </div>
+
+        <span class="clasificados-badge">Después de cuartos</span>
+      </div>
+
+      <div class="row g-3 dieciseisavos-grid">
+        ${partidos.map(p => `
+          <div class="col-12 col-md-6">
+            <div class="dieciseisavos-card">
+              <div class="dieciseisavos-card-top">
+                <span>Partido n.º ${p.numero}</span>
+                <strong>${p.hora}</strong>
+              </div>
+
+              <div class="dieciseisavos-teams">
+                ${renderSlotSemifinalPreview(p.local, p.equipoLocal)}
+
+                <div class="dieciseisavos-vs">VS</div>
+
+                ${renderSlotSemifinalPreview(p.visita, p.equipoVisita)}
+              </div>
+
+              <div class="dieciseisavos-info">
+                ${p.fecha}
+                <span>·</span>
+                ${p.estadio} (${p.ciudad})
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderSlotSemifinalPreview(slot, equipo) {
+  if (!equipo) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>Ganador ${slot.replace('W', 'P.')}</strong>
+        </div>
+        <small>Se define en cuartos</small>
+      </div>
+    `;
+  }
+
+  const flag = BANDERAS[equipo] || 'mx';
+
+  return `
+    <div class="dieciseisavos-team">
+      <span class="slot-label">${slot}</span>
+      <div class="dieciseisavos-team-main">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <strong>${equipo}</strong>
+      </div>
+      <small>Ganador ${slot.replace('W', 'P.')}</small>
+    </div>
+  `;
+}
+
+function getEquipoSemifinal(eliminatorias, numero, tipo) {
+  const partido = eliminatorias.find(p =>
+    p.fase === 'semifinal' && Number(p.numero) === Number(numero)
+  );
+
+  if (!partido || !partido.ganador) return null;
+
+  if (tipo === 'ganador') {
+    return partido.ganador === 'L' ? partido.local : partido.visita;
+  }
+
+  return partido.ganador === 'L' ? partido.visita : partido.local;
+}
+
+function renderPreviewTercerLugar(eliminatorias = []) {
+  const local = getEquipoSemifinal(eliminatorias, 101, 'perdedor');
+  const visita = getEquipoSemifinal(eliminatorias, 102, 'perdedor');
+
+  return renderPreviewPartidoUnico({
+    titulo: 'Vista previa — 3er Lugar',
+    subtitulo: 'Perdedores de semifinales',
+    badge: 'Después de semifinales',
+    boton: 'Generar 3er lugar',
+    accion: 'window.generarTercerLugar()',
+    numero: 103,
+    slotLocal: 'RU101',
+    slotVisita: 'RU102',
+    local,
+    visita,
+    fecha: '18 Jul 2026',
+    hora: '15:00',
+    estadio: 'Hard Rock Stadium, Miami Gardens, Florida, EUA',
+    ciudad: 'Miami'
+  });
+}
+
+function renderPreviewFinal(eliminatorias = []) {
+  const local = getEquipoSemifinal(eliminatorias, 101, 'ganador');
+  const visita = getEquipoSemifinal(eliminatorias, 102, 'ganador');
+
+  return renderPreviewPartidoUnico({
+    titulo: 'Vista previa — Final',
+    subtitulo: 'Ganadores de semifinales',
+    badge: 'Después de semifinales',
+    boton: 'Generar final',
+    accion: 'window.generarFinal()',
+    numero: 104,
+    slotLocal: 'W101',
+    slotVisita: 'W102',
+    local,
+    visita,
+    fecha: '19 Jul 2026',
+    hora: '13:00',
+    estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA',
+    ciudad: 'Nueva York/Nueva Jersey'
+  });
+}
+
+function renderPreviewPartidoUnico(p) {
+  return `
+    <div class="dieciseisavos-preview mt-4">
+      <div class="dieciseisavos-header">
+        <div>
+          <h3>${p.titulo}</h3>
+          <p>${p.subtitulo}</p>
+
+          <button class="btn-generar-finales"
+                  onclick="${p.accion}">
+            ${p.boton}
+          </button>
+        </div>
+
+        <span class="clasificados-badge">${p.badge}</span>
+      </div>
+
+      <div class="row g-3 dieciseisavos-grid">
+        <div class="col-12 col-lg-6 mx-auto">
+          <div class="dieciseisavos-card">
+            <div class="dieciseisavos-card-top">
+              <span>Partido n.º ${p.numero}</span>
+              <strong>${p.hora}</strong>
+            </div>
+
+            <div class="dieciseisavos-teams">
+              ${renderSlotFinalPreview(p.slotLocal, p.local)}
+
+              <div class="dieciseisavos-vs">VS</div>
+
+              ${renderSlotFinalPreview(p.slotVisita, p.visita)}
+            </div>
+
+            <div class="dieciseisavos-info">
+              ${p.fecha}
+              <span>·</span>
+              ${p.estadio} (${p.ciudad})
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSlotFinalPreview(slot, equipo) {
+  if (!equipo) {
+    return `
+      <div class="dieciseisavos-team pendiente">
+        <span class="slot-label">${slot}</span>
+        <div class="dieciseisavos-team-main">
+          <span class="shield-icon">♢</span>
+          <strong>${slot.startsWith('RU') ? 'Perdedor' : 'Ganador'} ${slot.replace('RU', 'P.').replace('W', 'P.')}</strong>
+        </div>
+        <small>Se define en semifinales</small>
+      </div>
+    `;
+  }
+
+  const flag = BANDERAS[equipo] || 'mx';
+
+  return `
+    <div class="dieciseisavos-team">
+      <span class="slot-label">${slot}</span>
+      <div class="dieciseisavos-team-main">
+        <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
+        <strong>${equipo}</strong>
+      </div>
+      <small>Desde semifinales</small>
+    </div>
+  `;
+}
+
+// ══════════════════════════════
 // POSICIONES — REALTIME ADMIN
 // ══════════════════════════════
 let unsubscribePosicionesAdmin = [];
@@ -946,6 +2208,10 @@ window.cargarPosiciones = function() {
     onSnapshot(collection(db, 'resultados'), programarRenderPosicionesAdmin)
   );
 
+  unsubscribePosicionesAdmin.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderPosicionesAdmin)
+  );
+
   renderPosicionesAdminRealtime();
 };
 
@@ -955,13 +2221,12 @@ async function renderPosicionesAdminRealtime() {
   if (!tbody) return;
 
   try {
-    const [jugSnap, predSnap, resSnap] = await Promise.all([
+    const [jugSnap, predSnap, resSnap, elimSnap] = await Promise.all([
       getDocs(collection(db, 'jugadores')),
       getDocs(collection(db, 'predicciones')),
-      getDocs(collection(db, 'resultados'))
+      getDocs(collection(db, 'resultados')),
+      getDocs(collection(db, 'eliminatorias'))
     ]);
-
-    const totalResultados = resSnap.size;
 
     const resMap = {};
     resSnap.docs.forEach(d => {
@@ -969,14 +2234,38 @@ async function renderPosicionesAdminRealtime() {
       resMap[(data.partidoId || '').toLowerCase()] = data.lev;
     });
 
+    const elimMap = {};
+    elimSnap.docs.forEach(d => {
+      const data = d.data();
+      if (data.ganador) {
+        elimMap[d.id] = data.ganador;
+      }
+    });
+
+    const totalResultados = resSnap.size + Object.keys(elimMap).length;
+
     const aciertosMap = {};
+    const aciertosGrupoMap = {};
+    const aciertosElimMap = {};
 
     predSnap.docs.forEach(d => {
       const data = d.data();
-      const resultadoReal = resMap[(data.partidoId || '').toLowerCase()];
+      const partidoId = data.partidoId || '';
+      const resultadoGrupos = resMap[partidoId.toLowerCase()];
+      const resultadoElim = elimMap[partidoId];
+
+      const resultadoReal = resultadoGrupos || resultadoElim;
 
       if (resultadoReal && resultadoReal === data.pick) {
         aciertosMap[data.jugadorId] = (aciertosMap[data.jugadorId] || 0) + 1;
+
+        if (resultadoGrupos) {
+          aciertosGrupoMap[data.jugadorId] = (aciertosGrupoMap[data.jugadorId] || 0) + 1;
+        }
+
+        if (resultadoElim) {
+          aciertosElimMap[data.jugadorId] = (aciertosElimMap[data.jugadorId] || 0) + 1;
+        }
       }
     });
 
@@ -997,7 +2286,9 @@ async function renderPosicionesAdminRealtime() {
     const jugadores = jugSnap.docs.map(d => ({
       id: d.id,
       nombre: d.data().nombre,
-      aciertos: aciertosMap[d.id] || 0
+      aciertos: aciertosMap[d.id] || 0,
+      aciertosGrupo: aciertosGrupoMap[d.id] || 0,
+      aciertosElim: aciertosElimMap[d.id] || 0
     })).sort((a, b) => {
       if (b.aciertos !== a.aciertos) return b.aciertos - a.aciertos;
       return a.nombre.localeCompare(b.nombre);
@@ -1043,7 +2334,7 @@ async function renderPosicionesAdminRealtime() {
 
           <td>
             <span class="badge-quiniela ${j.aciertos > 0 ? 'si' : 'no'}">
-              ${j.aciertos}/${totalResultados}
+              G:${j.aciertosGrupo} · E:${j.aciertosElim} · T:${j.aciertos}/${totalResultados}
             </span>
           </td>
 
@@ -1345,10 +2636,36 @@ window.eliminarJugador = async function(id, nombre) {
 // ══════════════════════════════
 // FECHA LÍMITE PICKS
 // ══════════════════════════════
-window.guardarFechaLimite = async function(jornada) {
-  const fecha = document.getElementById(`cfg-fecha-${jornada === 'jornada1' ? 'j1' : jornada === 'jornada2' ? 'j2' : 'j3'}`).value;
-  const hora  = document.getElementById(`cfg-hora-${jornada === 'jornada1' ? 'j1' : jornada === 'jornada2' ? 'j2' : 'j3'}`).value;
-  const sufijo = jornada === 'jornada1' ? 'j1' : jornada === 'jornada2' ? 'j2' : 'j3';
+function getConfigSuffix(fase) {
+  if (fase === 'jornada1') return 'j1';
+  if (fase === 'jornada2') return 'j2';
+  if (fase === 'jornada3') return 'j3';
+  if (fase === 'dieciseisavos') return 'd16';
+  if (fase === 'octavos') return 'oct';
+  if (fase === 'cuartos') return 'cua';
+  if (fase === 'semifinal') return 'sf';
+  if (fase === 'tercer') return 'ter';
+  if (fase === 'final') return 'fin';
+  return fase;
+}
+
+function getConfigLabel(fase) {
+  if (fase === 'jornada1') return 'Jornada 1';
+  if (fase === 'jornada2') return 'Jornada 2';
+  if (fase === 'jornada3') return 'Jornada 3';
+  if (fase === 'dieciseisavos') return 'Dieciseisavos';
+  if (fase === 'octavos') return 'Octavos';
+  if (fase === 'cuartos') return 'Cuartos';
+  if (fase === 'semifinal') return 'Semifinales';
+  if (fase === 'tercer') return '3er Lugar';
+  if (fase === 'final') return 'Final';
+  return fase;
+}
+
+window.guardarFechaLimite = async function(fase) {
+  const sufijo = getConfigSuffix(fase);
+  const fecha = document.getElementById(`cfg-fecha-${sufijo}`).value;
+  const hora  = document.getElementById(`cfg-hora-${sufijo}`).value;
   const msg   = document.getElementById(`cfg-fecha-msg-${sufijo}`);
 
   if (!fecha || !hora) {
@@ -1359,12 +2676,13 @@ window.guardarFechaLimite = async function(jornada) {
   }
 
   try {
-    await setDoc(doc(db, 'config', `fechaLimite_${jornada}`), {
-      jornada,
+    await setDoc(doc(db, 'config', `fechaLimite_${fase}`), {
+      fase,
+      jornada: fase,
       fecha,
       hora,
-      timestamp:      new Date(`${fecha}T${hora}:00`),
-      actualizadoEn:  new Date()
+      timestamp: new Date(`${fecha}T${hora}:00`),
+      actualizadoEn: new Date()
     });
 
     msg.style.display = 'block';
@@ -1389,15 +2707,44 @@ function mostrarFechaActual(sufijo, fecha, hora) {
 
 async function cargarFechaLimiteConfig() {
   try {
-    const [snapJ1, snapJ2, snapJ3, snapAJ2, snapAJ3] = await Promise.all([
-      getDoc(doc(db, 'config', 'fechaLimite_jornada1')),
-      getDoc(doc(db, 'config', 'fechaLimite_jornada2')),
-      getDoc(doc(db, 'config', 'fechaLimite_jornada3')),
-      getDoc(doc(db, 'config', 'aparicion_jornada2')),
-      getDoc(doc(db, 'config', 'aparicion_jornada3')),
-    ]);
+    const fasesLimite = [
+      ['j1', 'jornada1'],
+      ['j2', 'jornada2'],
+      ['j3', 'jornada3'],
+      ['d16', 'dieciseisavos'],
+      ['oct', 'octavos'],
+      ['cua', 'cuartos'],
+      ['sf', 'semifinal'],
+      ['ter', 'tercer'],
+      ['fin', 'final']
+    ];
 
-    [['j1', snapJ1], ['j2', snapJ2], ['j3', snapJ3]].forEach(([sufijo, snap]) => {
+    const fasesAparicion = [
+      ['j2', 'jornada2'],
+      ['j3', 'jornada3'],
+      ['d16', 'dieciseisavos'],
+      ['oct', 'octavos'],
+      ['cua', 'cuartos'],
+      ['sf', 'semifinal'],
+      ['ter', 'tercer'],
+      ['fin', 'final']
+    ];
+
+    const snapsLimite = await Promise.all(
+      fasesLimite.map(([_, fase]) =>
+        getDoc(doc(db, 'config', `fechaLimite_${fase}`))
+      )
+    );
+
+    const snapsAparicion = await Promise.all(
+      fasesAparicion.map(([_, fase]) =>
+        getDoc(doc(db, 'config', `aparicion_${fase}`))
+      )
+    );
+
+    fasesLimite.forEach(([sufijo], i) => {
+      const snap = snapsLimite[i];
+
       if (snap.exists()) {
         const data = snap.data();
 
@@ -1408,7 +2755,9 @@ async function cargarFechaLimiteConfig() {
       }
     });
 
-    [['j2', snapAJ2], ['j3', snapAJ3]].forEach(([sufijo, snap]) => {
+    fasesAparicion.forEach(([sufijo], i) => {
+      const snap = snapsAparicion[i];
+
       if (snap.exists()) {
         const data = snap.data();
 
@@ -1419,6 +2768,7 @@ async function cargarFechaLimiteConfig() {
           `📅 Aparece el: ${data.fecha} a las ${data.hora} (CDMX)`;
       }
     });
+
   } catch(e) {
     console.error(e);
   }
@@ -1519,8 +2869,8 @@ window.reiniciarTodo = async function() {
   }
 };
 
-window.guardarAparicion = async function(jornada) {
-  const sufijo = jornada === 'jornada2' ? 'j2' : 'j3';
+window.guardarAparicion = async function(fase) {
+  const sufijo = getConfigSuffix(fase);
   const fecha  = document.getElementById(`cfg-aparicion-fecha-${sufijo}`).value;
   const hora   = document.getElementById(`cfg-aparicion-hora-${sufijo}`).value;
   const msg    = document.getElementById(`cfg-aparicion-msg-${sufijo}`);
@@ -1533,17 +2883,18 @@ window.guardarAparicion = async function(jornada) {
   }
 
   try {
-    await setDoc(doc(db, 'config', `aparicion_${jornada}`), {
-      jornada,
+    await setDoc(doc(db, 'config', `aparicion_${fase}`), {
+      fase,
+      jornada: fase,
       fecha,
       hora,
-      timestamp:     new Date(`${fecha}T${hora}:00`),
+      timestamp: new Date(`${fecha}T${hora}:00`),
       actualizadoEn: new Date()
     });
 
     msg.style.display = 'block';
     msg.className = 'reset-msg exito';
-    msg.textContent = '✅ Fecha de aparición guardada.';
+    msg.textContent = '✅ Fecha de publicación guardada.';
 
     document.getElementById(`cfg-aparicion-actual-${sufijo}`).textContent =
       `📅 Aparece el: ${fecha} a las ${hora} (CDMX)`;
@@ -1557,14 +2908,15 @@ window.guardarAparicion = async function(jornada) {
   }
 };
 
-window.resetAparicion = async function(jornada) {
-  const sufijo = jornada === 'jornada2' ? 'j2' : 'j3';
+window.resetAparicion = async function(fase) {
+  const sufijo = getConfigSuffix(fase);
   const msg    = document.getElementById(`cfg-aparicion-msg-${sufijo}`);
+  const label  = getConfigLabel(fase);
 
-  if (!confirm(`¿Borrar la fecha de aparición de ${jornada === 'jornada2' ? 'Jornada 2' : 'Jornada 3'}? La jornada dejará de ser visible para los jugadores.`)) return;
+  if (!confirm(`¿Borrar la fecha de publicación de ${label}?`)) return;
 
   try {
-    await deleteDoc(doc(db, 'config', `aparicion_${jornada}`));
+    await deleteDoc(doc(db, 'config', `aparicion_${fase}`));
 
     document.getElementById(`cfg-aparicion-fecha-${sufijo}`).value = '';
     document.getElementById(`cfg-aparicion-hora-${sufijo}`).value  = '';
@@ -1572,7 +2924,7 @@ window.resetAparicion = async function(jornada) {
 
     msg.style.display = 'block';
     msg.className = 'reset-msg exito';
-    msg.textContent = '✅ Fecha de aparición eliminada.';
+    msg.textContent = '✅ Fecha de publicación eliminada.';
 
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
   } catch(e) {
@@ -1583,40 +2935,165 @@ window.resetAparicion = async function(jornada) {
   }
 };
 
-window.resetFechaLimite = async function(jornada) {
-  const sufijo = jornada === 'jornada1' ? 'j1' : jornada === 'jornada2' ? 'j2' : 'j3';
+window.resetFechaLimite = async function(fase) {
+  const sufijo = getConfigSuffix(fase);
   const msg    = document.getElementById(`cfg-fecha-msg-${sufijo}`);
+  const label  = getConfigLabel(fase);
 
-  if (!confirm(`¿Borrar la fecha límite de ${jornada === 'jornada1' ? 'Jornada 1' : jornada === 'jornada2' ? 'Jornada 2' : 'Jornada 3'}?`)) return;
+  if (!confirm(`¿Borrar la fecha límite de ${label}?`)) return;
 
   try {
-    await deleteDoc(doc(db, 'config', `fechaLimite_${jornada}`));
+    await deleteDoc(doc(db, 'config', `fechaLimite_${fase}`));
 
     document.getElementById(`cfg-fecha-${sufijo}`).value = '';
     document.getElementById(`cfg-hora-${sufijo}`).value  = '';
     document.getElementById(`cfg-fecha-actual-${sufijo}`).textContent = '';
 
     msg.style.display = 'block';
-    msg.className     = 'reset-msg exito';
-    msg.textContent   = '✅ Fecha límite eliminada.';
+    msg.className = 'reset-msg exito';
+    msg.textContent = '✅ Fecha límite eliminada.';
 
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
   } catch(e) {
     console.error(e);
     msg.style.display = 'block';
-    msg.className     = 'reset-msg error';
-    msg.textContent   = '❌ Error al borrar.';
+    msg.className = 'reset-msg error';
+    msg.textContent = '❌ Error al borrar.';
   }
 };
 
+async function borrarEliminatoriasTodas() {
+  let total = 0;
+  const snap = await getDocs(collection(db, 'eliminatorias'));
+
+  for (const d of snap.docs) {
+    await deleteDoc(doc(db, 'eliminatorias', d.id));
+    total++;
+  }
+
+  return total;
+}
+
+async function borrarEliminatoriaPorFase(fase) {
+  let total = 0;
+
+  // Borrar partidos generados de eliminatorias
+  const elimSnap = await getDocs(
+    query(collection(db, 'eliminatorias'), where('fase', '==', fase))
+  );
+
+  for (const d of elimSnap.docs) {
+    await deleteDoc(doc(db, 'eliminatorias', d.id));
+    total++;
+  }
+
+  // Borrar predicciones de jugadores de esa eliminatoria
+  const predSnap = await getDocs(
+    query(collection(db, 'predicciones'), where('jornada', '==', fase))
+  );
+
+  for (const d of predSnap.docs) {
+    await deleteDoc(doc(db, 'predicciones', d.id));
+    total++;
+  }
+
+  return total;
+}
+
+async function borrarFasesEliminatoria(fases) {
+  let total = 0;
+
+  for (const fase of fases) {
+    total += await borrarEliminatoriaPorFase(fase);
+  }
+
+  return total;
+}
+
+async function borrarDieciseisavosOctavosYCuartos() {
+  let total = 0;
+
+  for (const fase of ['dieciseisavos', 'octavos', 'cuartos']) {
+    total += await borrarEliminatoriaPorFase(fase);
+  }
+
+  return total;
+}
+
+window.resetSoloDieciseisavos = async function() {
+  if (!confirm('¿Borrar dieciseisavos, octavos, cuartos, semifinales, 3er lugar y final?')) return;
+  await ejecutarResetFases(['dieciseisavos', 'octavos', 'cuartos', 'semifinal', 'tercer', 'final'], 'dieciseisavos en adelante');
+};
+
+window.resetSoloOctavos = async function() {
+  if (!confirm('¿Borrar octavos, cuartos, semifinales, 3er lugar y final?')) return;
+  await ejecutarResetFases(['octavos', 'cuartos', 'semifinal', 'tercer', 'final'], 'octavos en adelante');
+};
+
+window.resetSoloCuartos = async function() {
+  if (!confirm('¿Borrar cuartos, semifinales, 3er lugar y final?')) return;
+  await ejecutarResetFases(['cuartos', 'semifinal', 'tercer', 'final'], 'cuartos en adelante');
+};
+
+window.resetSoloSemifinal = async function() {
+  if (!confirm('¿Borrar semifinales, 3er lugar y final?')) return;
+  await ejecutarResetFases(['semifinal', 'tercer', 'final'], 'semifinales en adelante');
+};
+
+window.resetSoloTercer = async function() {
+  if (!confirm('¿Borrar 3er lugar y final?')) return;
+  await ejecutarResetFases(['tercer', 'final'], '3er lugar y final');
+};
+
+window.resetSoloFinal = async function() {
+  if (!confirm('¿Borrar solo la final?')) return;
+  await ejecutarResetFases(['final'], 'final');
+};
+
+async function ejecutarResetFases(fases, texto) {
+
+  const msg = document.getElementById('reset-msg');
+
+  msg.style.display = 'block';
+
+  msg.className = 'reset-msg cargando';
+
+  msg.textContent = `Borrando ${texto}...`;
+
+  try {
+
+    const total = await borrarFasesEliminatoria(fases);
+
+    msg.className = 'reset-msg exito';
+
+    msg.textContent = `✅ Se borraron ${total} partidos de ${texto}.`;
+
+    if (FASES_ELIMINATORIAS[faseActiva]) {
+      await cargarFase('jornada1');
+    }
+
+    setTimeout(() => {
+      msg.style.display = 'none';
+    }, 3000);
+
+  } catch(e) {
+
+    console.error(e);
+
+    msg.className = 'reset-msg error';
+
+    msg.textContent = '❌ Error al borrar eliminatorias.';
+  }
+}
+
 window.resetJornada = async function(jornada) {
   const labels = {
-    jornada1: 'Jornada 1 (borra todo)',
-    jornada2: 'Jornada 2 y Jornada 3',
-    jornada3: 'Jornada 3'
+    jornada1: 'Jornada 1, Jornada 2, Jornada 3 y todas las eliminatorias',
+    jornada2: 'Jornada 2, Jornada 3 y todas las eliminatorias',
+    jornada3: 'Jornada 3 y todas las eliminatorias'
   };
 
-  const confirmado = confirm(`¿Seguro que quieres borrar los resultados Y predicciones de ${labels[jornada]}?`);
+  const confirmado = confirm(`¿Seguro que quieres borrar ${labels[jornada]}?`);
   if (!confirmado) return;
 
   const msg = document.getElementById('reset-msg');
@@ -1650,6 +3127,15 @@ window.resetJornada = async function(jornada) {
       }
     }
 
+    totalBorrados += await borrarFasesEliminatoria([
+      'dieciseisavos',
+      'octavos',
+      'cuartos',
+      'semifinal',
+      'tercer',
+      'final'
+    ]);
+
     msg.className   = 'reset-msg exito';
     msg.textContent = `✅ Se borraron ${totalBorrados} registros correctamente.`;
 
@@ -1657,6 +3143,10 @@ window.resetJornada = async function(jornada) {
 
     if (document.getElementById('sec-dashboard').classList.contains('active')) {
       cargarDashboard();
+    }
+
+    if (FASES_ELIMINATORIAS[faseActiva]) {
+      await cargarFase('jornada1');
     }
 
   } catch(e) {
@@ -1667,6 +3157,525 @@ window.resetJornada = async function(jornada) {
 };
 
 window.addEventListener('load', async () => {
+  iniciarEliminatoriasListenerAdmin();
+
   await cargarFase('jornada1');
   await cargarDashboard();
 });
+
+// ══════════════════════════════
+// GENERAR DIECISEISAVOS
+// ══════════════════════════════
+window.generarDieciseisavos = async function() {
+
+  const confirmado = confirm(
+    '¿Generar los partidos oficiales de dieciseisavos?'
+  );
+
+  if (!confirmado) return;
+
+  try {
+
+    const resultadosSnap = await getDocs(
+      collection(db, 'resultados')
+    );
+
+    const resultados = resultadosSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    const clasificados = calcularClasificados(resultados);
+
+    const partidosBase = getDieciseisavosOficiales();
+
+    const tercerosAsignados = asignarMejoresTerceros(
+      partidosBase,
+      clasificados
+    );
+
+    const partidos = partidosBase.map(p => ({
+      ...p,
+      equipoLocal: resolverSlotDieciseisavos(
+        p.local,
+        clasificados,
+        tercerosAsignados
+      ),
+
+      equipoVisita: resolverSlotDieciseisavos(
+        p.visita,
+        clasificados,
+        tercerosAsignados
+      )
+    }));
+
+    for (const p of partidos) {
+
+      const ref = doc(
+        db,
+        'eliminatorias',
+        `dieciseisavos-${p.id}`
+      );
+
+      await setDoc(ref, {
+
+        fase: 'dieciseisavos',
+
+        numero: p.id,
+
+        local: p.equipoLocal?.equipo || null,
+        visita: p.equipoVisita?.equipo || null,
+
+        slotLocal: p.local,
+        slotVisita: p.visita,
+
+        fecha: p.fecha,
+        hora: p.hora,
+
+        estadio: p.estadio,
+        ciudad: p.ciudad,
+
+        marcadorLocal: null,
+        marcadorVisita: null,
+
+        ganador: null,
+
+        creadoEn: serverTimestamp()
+
+      });
+
+    }
+
+    alert('✅ Dieciseisavos generados correctamente.');
+
+  } catch(e) {
+
+    console.error(e);
+
+    alert('❌ Error al generar dieciseisavos.');
+
+  }
+
+};
+
+// ══════════════════════════════
+// GENERAR OCTAVOS — FIFA
+// ══════════════════════════════
+window.generarOctavos = async function() {
+  const confirmado = confirm('¿Generar octavos con la lógica oficial FIFA?');
+  if (!confirmado) return;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', 'dieciseisavos'))
+    );
+
+    const partidos16 = snap.docs.map(d => ({ idDoc: d.id, ...d.data() }));
+
+    const getPartido = numero => partidos16.find(p => Number(p.numero) === numero);
+
+    const getGanador = numero => {
+      const p = getPartido(numero);
+      if (!p) return null;
+      if (p.ganador === 'L') return p.local;
+      if (p.ganador === 'V') return p.visita;
+      return null;
+    };
+
+    const faltantes = [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]
+      .filter(n => !getGanador(n));
+
+    if (faltantes.length > 0) {
+      alert(`⚠️ Faltan ganadores en dieciseisavos: ${faltantes.join(', ')}`);
+      return;
+    }
+
+    const octavos = [
+      { numero: 90, local: getGanador(73), visita: getGanador(75), slotLocal: 'W73', slotVisita: 'W75', hora: '11:00', fecha: '04 Jul 2026', estadio: 'NRG Stadium, Houston, Texas, EUA', ciudad: 'Houston' },
+      { numero: 89, local: getGanador(74), visita: getGanador(77), slotLocal: 'W74', slotVisita: 'W77', hora: '15:00', fecha: '04 Jul 2026', estadio: 'Lincoln Financial Field, Philadelphia, Pennsylvania, EUA', ciudad: 'Filadelfia' },
+      { numero: 91, local: getGanador(76), visita: getGanador(78), slotLocal: 'W76', slotVisita: 'W78', hora: '14:00', fecha: '05 Jul 2026', estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA', ciudad: 'Nueva York/Nueva Jersey' },
+      { numero: 92, local: getGanador(79), visita: getGanador(80), slotLocal: 'W79', slotVisita: 'W80', hora: '18:00', fecha: '05 Jul 2026', estadio: 'Estadio Banorte, Mexico City, México', ciudad: 'Ciudad de México' },
+      { numero: 93, local: getGanador(83), visita: getGanador(84), slotLocal: 'W83', slotVisita: 'W84', hora: '13:00', fecha: '06 Jul 2026', estadio: 'AT&T Stadium, Arlington, Texas, EUA', ciudad: 'Dallas' },
+      { numero: 94, local: getGanador(81), visita: getGanador(82), slotLocal: 'W81', slotVisita: 'W82', hora: '18:00', fecha: '06 Jul 2026', estadio: 'Lumen Field, Seattle, Washington, EUA', ciudad: 'Seattle' },
+      { numero: 95, local: getGanador(86), visita: getGanador(88), slotLocal: 'W86', slotVisita: 'W88', hora: '10:00', fecha: '07 Jul 2026', estadio: 'Mercedes-Benz Stadium, Atlanta, Georgia, EUA', ciudad: 'Atlanta' },
+      { numero: 96, local: getGanador(85), visita: getGanador(87), slotLocal: 'W85', slotVisita: 'W87', hora: '14:00', fecha: '07 Jul 2026', estadio: 'BC Place, Vancouver, Canadá', ciudad: 'Vancouver' }
+    ];
+
+    for (const p of octavos) {
+      await setDoc(doc(db, 'eliminatorias', `octavos-${p.numero}`), {
+        fase: 'octavos',
+        numero: p.numero,
+        local: p.local,
+        visita: p.visita,
+        slotLocal: p.slotLocal,
+        slotVisita: p.slotVisita,
+        fecha: p.fecha,
+        hora: p.hora,
+        estadio: p.estadio,
+        ciudad: p.ciudad,
+        marcadorLocal: null,
+        marcadorVisita: null,
+        ganador: null,
+        creadoEn: serverTimestamp()
+      });
+    }
+
+    alert('✅ Octavos generados correctamente con lógica FIFA.');
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al generar octavos.');
+  }
+};
+
+// ══════════════════════════════
+// GENERAR CUARTOS
+// ══════════════════════════════
+window.generarCuartos = async function() {
+
+  const confirmado = confirm(
+    '¿Generar cuartos con los ganadores actuales?'
+  );
+
+  if (!confirmado) return;
+
+  try {
+
+    const snap = await getDocs(
+      query(
+        collection(db, 'eliminatorias'),
+        where('fase', '==', 'octavos')
+      )
+    );
+
+    const partidosOct = snap.docs
+      .map(d => ({
+        idDoc: d.id,
+        ...d.data()
+      }));
+
+    const getPartido = numero =>
+      partidosOct.find(p => Number(p.numero) === numero);
+
+    const getGanador = numero => {
+
+      const p = getPartido(numero);
+
+      if (!p) return null;
+
+      if (p.ganador === 'L') return p.local;
+      if (p.ganador === 'V') return p.visita;
+
+      return null;
+    };
+
+    const faltantes = [89,90,91,92,93,94,95,96]
+      .filter(n => !getGanador(n));
+
+    if (faltantes.length > 0) {
+
+      alert(
+        `⚠️ Faltan ganadores: ${faltantes.join(', ')}`
+      );
+
+      return;
+    }
+
+    const cuartos = [
+
+      {
+        numero: 97,
+        local: getGanador(89),
+        visita: getGanador(90),
+
+        slotLocal: 'W89',
+        slotVisita: 'W90',
+
+        hora: '14:00',
+
+        estadio: 'Gillette Stadium',
+        ciudad: 'Boston'
+      },
+
+      {
+        numero: 98,
+        local: getGanador(93),
+        visita: getGanador(94),
+
+        slotLocal: 'W93',
+        slotVisita: 'W94',
+
+        hora: '13:00',
+
+        estadio: 'SoFi Stadium',
+        ciudad: 'Los Ángeles'
+      },
+
+      {
+        numero: 99,
+        local: getGanador(91),
+        visita: getGanador(92),
+
+        slotLocal: 'W91',
+        slotVisita: 'W92',
+
+        hora: '15:00',
+
+        estadio: 'Hard Rock Stadium',
+        ciudad: 'Miami'
+      },
+
+      {
+        numero: 100,
+        local: getGanador(95),
+        visita: getGanador(96),
+
+        slotLocal: 'W95',
+        slotVisita: 'W96',
+
+        hora: '19:00',
+
+        estadio: 'Arrowhead Stadium',
+        ciudad: 'Kansas City'
+      }
+
+    ];
+
+    for (const p of cuartos) {
+
+      await setDoc(
+        doc(db, 'eliminatorias', `cuartos-${p.numero}`),
+        {
+
+          fase: 'cuartos',
+
+          numero: p.numero,
+
+          local: p.local,
+          visita: p.visita,
+
+          slotLocal: p.slotLocal,
+          slotVisita: p.slotVisita,
+
+          marcadorLocal: null,
+          marcadorVisita: null,
+
+          ganador: null,
+
+          fecha: 'Cuartos de final',
+
+          hora: p.hora,
+
+          estadio: p.estadio,
+          ciudad: p.ciudad,
+
+          creadoEn: serverTimestamp()
+
+        }
+      );
+
+    }
+
+    alert('✅ Cuartos generados.');
+
+  } catch(e) {
+
+    console.error(e);
+
+    alert('❌ Error al generar cuartos.');
+
+  }
+
+};
+
+window.generarSemifinales = async function() {
+  const confirmado = confirm('¿Generar semifinales con los ganadores actuales?');
+  if (!confirmado) return;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', 'cuartos'))
+    );
+
+    const partidosCua = snap.docs.map(d => ({
+      idDoc: d.id,
+      ...d.data()
+    }));
+
+    const getPartido = numero =>
+      partidosCua.find(p => Number(p.numero) === numero);
+
+    const getGanador = numero => {
+      const p = getPartido(numero);
+      if (!p) return null;
+
+      if (p.ganador === 'L') return p.local;
+      if (p.ganador === 'V') return p.visita;
+
+      return null;
+    };
+
+    const faltantes = [97,98,99,100].filter(n => !getGanador(n));
+
+    if (faltantes.length > 0) {
+      alert(`⚠️ Faltan ganadores en cuartos: ${faltantes.join(', ')}`);
+      return;
+    }
+
+    const semifinales = [
+      {
+        numero: 101,
+        local: getGanador(97),
+        visita: getGanador(98),
+        slotLocal: 'W97',
+        slotVisita: 'W98',
+        fecha: '14 Jul 2026',
+        hora: '18:00',
+        estadio: 'AT&T Stadium, Arlington, Texas, EUA',
+        ciudad: 'Dallas'
+      },
+      {
+        numero: 102,
+        local: getGanador(99),
+        visita: getGanador(100),
+        slotLocal: 'W99',
+        slotVisita: 'W100',
+        fecha: '15 Jul 2026',
+        hora: '18:00',
+        estadio: 'Mercedes-Benz Stadium, Atlanta, Georgia, EUA',
+        ciudad: 'Atlanta'
+      }
+    ];
+
+    for (const p of semifinales) {
+      await setDoc(doc(db, 'eliminatorias', `semifinal-${p.numero}`), {
+        fase: 'semifinal',
+        numero: p.numero,
+
+        local: p.local,
+        visita: p.visita,
+
+        slotLocal: p.slotLocal,
+        slotVisita: p.slotVisita,
+
+        fecha: p.fecha,
+        hora: p.hora,
+
+        estadio: p.estadio,
+        ciudad: p.ciudad,
+
+        marcadorLocal: null,
+        marcadorVisita: null,
+        ganador: null,
+
+        creadoEn: serverTimestamp()
+      });
+    }
+
+    alert('✅ Semifinales generadas correctamente.');
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al generar semifinales.');
+  }
+};
+
+window.generarTercerLugar = async function() {
+  const confirmado = confirm('¿Generar partido por el 3er lugar?');
+  if (!confirmado) return;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', 'semifinal'))
+    );
+
+    const semis = snap.docs.map(d => ({ idDoc: d.id, ...d.data() }));
+
+    const perdedor = numero => {
+      const p = semis.find(x => Number(x.numero) === numero);
+      if (!p || !p.ganador) return null;
+      return p.ganador === 'L' ? p.visita : p.local;
+    };
+
+    const local = perdedor(101);
+    const visita = perdedor(102);
+
+    if (!local || !visita) {
+      alert('⚠️ Debes definir ganadores en semifinales.');
+      return;
+    }
+
+    await setDoc(doc(db, 'eliminatorias', 'tercer-103'), {
+      fase: 'tercer',
+      numero: 103,
+      local,
+      visita,
+      slotLocal: 'RU101',
+      slotVisita: 'RU102',
+      fecha: '18 Jul 2026',
+      hora: '15:00',
+      estadio: 'Hard Rock Stadium, Miami Gardens, Florida, EUA',
+      ciudad: 'Miami',
+      marcadorLocal: null,
+      marcadorVisita: null,
+      ganador: null,
+      creadoEn: serverTimestamp()
+    });
+
+    alert('✅ Partido por el 3er lugar generado.');
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al generar 3er lugar.');
+  }
+};
+
+window.generarFinal = async function() {
+  const confirmado = confirm('¿Generar final?');
+  if (!confirmado) return;
+
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', 'semifinal'))
+    );
+
+    const semis = snap.docs.map(d => ({ idDoc: d.id, ...d.data() }));
+
+    const ganador = numero => {
+      const p = semis.find(x => Number(x.numero) === numero);
+      if (!p || !p.ganador) return null;
+      return p.ganador === 'L' ? p.local : p.visita;
+    };
+
+    const local = ganador(101);
+    const visita = ganador(102);
+
+    if (!local || !visita) {
+      alert('⚠️ Debes definir ganadores en semifinales.');
+      return;
+    }
+
+    await setDoc(doc(db, 'eliminatorias', 'final-104'), {
+      fase: 'final',
+      numero: 104,
+      local,
+      visita,
+      slotLocal: 'W101',
+      slotVisita: 'W102',
+      fecha: '19 Jul 2026',
+      hora: '13:00',
+      estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA',
+      ciudad: 'Nueva York/Nueva Jersey',
+      marcadorLocal: null,
+      marcadorVisita: null,
+      ganador: null,
+      creadoEn: serverTimestamp()
+    });
+
+    alert('✅ Final generada.');
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al generar final.');
+  }
+};

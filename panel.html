@@ -154,6 +154,7 @@
             <button class="btn-fase bloqueada" id="fase-8"  onclick="cargarFase('octavos')">⚪ Octavos</button>
             <button class="btn-fase bloqueada" id="fase-4"  onclick="cargarFase('cuartos')">⚪ Cuartos</button>
             <button class="btn-fase bloqueada" id="fase-sf" onclick="cargarFase('semifinal')">⚪ Semifinal</button>
+            <button class="btn-fase bloqueada" id="fase-3"  onclick="cargarFase('tercer')">🥉 3er Lugar</button>
             <button class="btn-fase bloqueada" id="fase-f"  onclick="cargarFase('final')">🏆 Final</button>
           </div>
         </div>
@@ -380,6 +381,104 @@
           </div>
           <div class="reset-msg mb-3" id="cfg-fecha-msg-j3" style="display:none;"></div>
           <div id="cfg-fecha-actual-j3" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#6fe0a8; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟢 Dieciseisavos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-d16" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-d16" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('dieciseisavos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('dieciseisavos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-d16" style="display:none;"></div>
+          <div id="cfg-fecha-actual-d16" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#60a5fa; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🔵 Octavos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-oct" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-oct" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('octavos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('octavos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-oct" style="display:none;"></div>
+          <div id="cfg-fecha-actual-oct" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#a855f7; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟣 Cuartos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha límite</label>
+              <input type="date" class="config-input" id="cfg-fecha-cua" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora límite (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-hora-cua" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarFechaLimite('cuartos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetFechaLimite('cuartos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-cua" style="display:none;"></div>
+          <div id="cfg-fecha-actual-cua" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#f97316; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟠 Semifinales</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5"><label class="config-label">Fecha límite</label><input type="date" class="config-input" id="cfg-fecha-sf" /></div>
+            <div class="col-12 col-md-3"><label class="config-label">Hora límite (CDMX)</label><input type="time" class="config-input" id="cfg-hora-sf" /></div>
+            <div class="col-6 col-md-2"><button class="btn-gold-config w-100" onclick="guardarFechaLimite('semifinal')">Guardar</button></div>
+            <div class="col-6 col-md-2"><button class="btn-reset-fecha w-100" onclick="resetFechaLimite('semifinal')">🗑 Borrar</button></div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-sf" style="display:none;"></div>
+          <div id="cfg-fecha-actual-sf" style="font-size:0.78rem; color:var(--text-muted);"></div>
+
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#cd7f32; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🥉 3er Lugar</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5"><label class="config-label">Fecha límite</label><input type="date" class="config-input" id="cfg-fecha-ter" /></div>
+            <div class="col-12 col-md-3"><label class="config-label">Hora límite (CDMX)</label><input type="time" class="config-input" id="cfg-hora-ter" /></div>
+            <div class="col-6 col-md-2"><button class="btn-gold-config w-100" onclick="guardarFechaLimite('tercer')">Guardar</button></div>
+            <div class="col-6 col-md-2"><button class="btn-reset-fecha w-100" onclick="resetFechaLimite('tercer')">🗑 Borrar</button></div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-ter" style="display:none;"></div>
+          <div id="cfg-fecha-actual-ter" style="font-size:0.78rem; color:var(--text-muted);"></div>
+
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#facc15; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🏆 Final</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5"><label class="config-label">Fecha límite</label><input type="date" class="config-input" id="cfg-fecha-fin" /></div>
+            <div class="col-12 col-md-3"><label class="config-label">Hora límite (CDMX)</label><input type="time" class="config-input" id="cfg-hora-fin" /></div>
+            <div class="col-6 col-md-2"><button class="btn-gold-config w-100" onclick="guardarFechaLimite('final')">Guardar</button></div>
+            <div class="col-6 col-md-2"><button class="btn-reset-fecha w-100" onclick="resetFechaLimite('final')">🗑 Borrar</button></div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-fecha-msg-fin" style="display:none;"></div>
+          <div id="cfg-fecha-actual-fin" style="font-size:0.78rem; color:var(--text-muted);"></div>
         </div>
 
         <!-- Fecha de aparición de jornadas -->
@@ -430,18 +529,150 @@
           </div>
           <div class="reset-msg mb-3" id="cfg-aparicion-msg-j3" style="display:none;"></div>
           <div id="cfg-aparicion-actual-j3" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#6fe0a8; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟢 Dieciseisavos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-d16" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-d16" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('dieciseisavos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('dieciseisavos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-d16" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-d16" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#60a5fa; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🔵 Octavos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-oct" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-oct" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('octavos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('octavos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-oct" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-oct" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#a855f7; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟣 Cuartos</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-cua" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-cua" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('cuartos')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('cuartos')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-cua" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-cua" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#f97316; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🟠 Semifinales</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-sf" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-sf" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('semifinal')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('semifinal')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-sf" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-sf" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#cd7f32; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🥉 3er Lugar</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-ter" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-ter" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('tercer')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('tercer')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-ter" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-ter" style="font-size:0.78rem; color:var(--text-muted);"></div>
+          <hr style="border-color:rgba(255,255,255,0.08); margin:1.25rem 0;">
+
+          <p style="color:#facc15; font-size:0.82rem; font-weight:800; margin-bottom:0.5rem;">🏆 Final</p>
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+              <label class="config-label">Fecha de publicación</label>
+              <input type="date" class="config-input" id="cfg-aparicion-fecha-fin" />
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="config-label">Hora (CDMX)</label>
+              <input type="time" class="config-input" id="cfg-aparicion-hora-fin" />
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-gold-config w-100" onclick="guardarAparicion('final')">Guardar</button>
+            </div>
+            <div class="col-6 col-md-2">
+              <button class="btn-reset-fecha w-100" onclick="resetAparicion('final')">🗑 Borrar</button>
+            </div>
+          </div>
+          <div class="reset-msg mb-3" id="cfg-aparicion-msg-fin" style="display:none;"></div>
+          <div id="cfg-aparicion-actual-fin" style="font-size:0.78rem; color:var(--text-muted);"></div>
         </div>
 
         <!-- Reset por jornada -->
         <div class="panel-card mb-3">
           <h6 class="config-card-title">🧪 Reset de Prueba</h6>
           <p style="color:var(--text-muted); font-size:0.82rem; margin-bottom:1.25rem;">
-            Borra los resultados guardados en Firebase. La Jornada 1 borra todo, la Jornada 2 borra J2 y J3, la Jornada 3 solo borra J3.
+            Jornada 1 borra todo. Jornada 2 borra J2, J3 y eliminatorias. Jornada 3 borra J3 y eliminatorias. También puedes borrar solo dieciseisavos, octavos, cuartos, semifinales, 3er lugar y la final.
           </p>
           <div class="reset-btns">
             <button class="btn-reset j1" onclick="resetJornada('jornada1')">🗑️ Resetear Jornada 1 (borra todo)</button>
-            <button class="btn-reset j2" onclick="resetJornada('jornada2')">🗑️ Resetear Jornada 2 (borra J2 y J3)</button>
-            <button class="btn-reset j3" onclick="resetJornada('jornada3')">🗑️ Resetear Jornada 3 (solo J3)</button>
+            <button class="btn-reset j2" onclick="resetJornada('jornada2')">🗑️ Resetear Jornada 2 + J3 + eliminatorias</button>
+            <button class="btn-reset j3" onclick="resetJornada('jornada3')">🗑️ Resetear Jornada 3 + eliminatorias</button>
+            <button class="btn-reset j3" onclick="resetSoloDieciseisavos()">🗑️ Resetear dieciseisavos+ octavos + cuartos + semifinales + 3er lugar + final</button>
+            <button class="btn-reset j2" onclick="resetSoloOctavos()">🗑️ Resetear octavos + cuartos + semifinales + 3er lugar + final</button>
+            <button class="btn-reset j1" onclick="resetSoloCuartos()">🗑️ Resetear cuartos + semifinales + 3er lugar + final</button>
+            <button class="btn-reset j2" onclick="resetSoloSemifinal()">🗑️ Resetear semifinales + 3er lugar + final</button>
+            <button class="btn-reset j3" onclick="resetSoloTercer()">🗑️ Resetear 3er lugar + final</button>
+            <button class="btn-reset j1" onclick="resetSoloFinal()">🗑️ Resetear solo final</button>
           </div>
           <div class="reset-msg" id="reset-msg" style="display:none;"></div>
         </div>
