@@ -2223,3 +2223,94 @@ table tbody tr:hover {
     font-size: 0.58rem;
   }
 }
+
+/* ══ RESET SOLICITUDES ══ */
+
+.badge-reset-count {
+  background: rgba(245,197,24,0.15);
+  border: 1px solid rgba(245,197,24,0.4);
+  color: var(--gold, #f5c518);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.reset-solicitud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 1rem;
+}
+.reset-solicitud-row:last-child { border-bottom: none; }
+
+.reset-sol-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.reset-sol-nombre {
+  font-weight: 800;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.reset-sol-hint {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.reset-sol-hint strong {
+  color: #6fe0a8;
+}
+
+.btn-reset-aprobar {
+  background: rgba(0,104,71,0.25);
+  border: 1px solid #006847;
+  color: #6fe0a8;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s;
+  flex-shrink: 0;
+}
+.btn-reset-aprobar:hover { background: rgba(0,104,71,0.45); }
+.btn-reset-aprobar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* ══ BOTONES ACTIVAR / ACTIVO ══ */
+
+.btn-activar {
+  background: rgba(245,197,24,0.15);
+  border: 1px solid rgba(245,197,24,0.5);
+  color: var(--gold, #f5c518);
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.18s;
+  white-space: nowrap;
+}
+.btn-activar:hover { background: rgba(245,197,24,0.3); }
+
+.btn-activado {
+  background: rgba(0,104,71,0.25);
+  border: 1px solid #006847;
+  color: #6fe0a8;
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.18s;
+  white-space: nowrap;
+}
+.btn-activado:hover { background: rgba(255,107,122,0.15); border-color: rgba(255,107,122,0.4); color: #ff8a96; }

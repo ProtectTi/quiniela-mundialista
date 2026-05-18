@@ -4,6 +4,7 @@ import {
   query,
   where,
   getDocs,
+  addDoc,
   runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
@@ -262,3 +263,67 @@ document.addEventListener('keydown', (e) => {
 // ── Labels originales de botones ──
 document.getElementById('btn-register').dataset.label = 'Crear cuenta';
 document.getElementById('btn-login').dataset.label    = 'Entrar';
+
+// ── RESTABLECER CONTRASEÑA ──
+window.toggleReset = function() {
+  const panel = document.getElementById('form-reset');
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    document.getElementById('reset-nombre').value = '';
+    document.getElementById('reset-pass1').value  = '';
+    document.getElementById('reset-pass2').value  = '';
+  }
+  hideAlert();
+};
+
+window.solicitarReset = async function() {
+  const nombre = document.getElementById('reset-nombre').value.trim();
+  const pass1  = document.getElementById('reset-pass1').value;
+  const pass2  = document.getElementById('reset-pass2').value;
+
+  if (!nombre)
+    return showAlert('Por favor ingresa tu nombre completo.', 'error');
+
+  if (pass1.length < 4)
+    return showAlert('La nueva contraseña debe tener al menos 4 caracteres.', 'error');
+
+  if (pass1 !== pass2)
+    return showAlert('Las contraseñas no coinciden.', 'error');
+
+  const btn = document.getElementById('btn-reset');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Actualizando...';
+  hideAlert();
+
+  try {
+    const q    = query(collection(db, 'jugadores'), where('nombreKey', '==', nombre.toLowerCase()));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      showAlert('No se encontró una cuenta con ese nombre.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = 'Cambiar contraseña';
+      return;
+    }
+
+    const jugadorDoc = snap.docs[0];
+    const passHash   = await hashPassword(pass1);
+
+    const { updateDoc } = await import('https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js');
+    await updateDoc(jugadorDoc.ref, { password: passHash });
+
+    showAlert('Contraseña actualizada correctamente. Ya puedes iniciar sesión.', 'success');
+    document.getElementById('reset-nombre').value = '';
+    document.getElementById('reset-pass1').value  = '';
+    document.getElementById('reset-pass2').value  = '';
+    document.getElementById('form-reset').style.display = 'none';
+
+  } catch(e) {
+    console.error(e);
+    showAlert('Error al actualizar la contraseña. Intenta de nuevo.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Cambiar contraseña';
+};

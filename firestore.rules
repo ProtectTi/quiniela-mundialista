@@ -16,7 +16,15 @@ service cloud.firestore {
                     && request.resource.data.nombre.size() <= 50
                     && request.resource.data.password is string
                     && request.resource.data.password.size() == 64; // SHA-256 hex
-      allow update, delete: if request.auth != null;
+      // Permite actualizar SOLO el campo password (reset de contraseña sin auth)
+      // El campo activado solo lo puede cambiar el admin autenticado
+      allow update: if request.auth != null
+                    || (
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password'])
+                      && request.resource.data.password is string
+                      && request.resource.data.password.size() == 64
+                    );
+      allow delete: if request.auth != null;
     }
 
     // ── PREDICCIONES ──

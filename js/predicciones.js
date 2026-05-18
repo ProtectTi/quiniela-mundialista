@@ -55,6 +55,14 @@ const guardandoPicks = {};
 
 // ── HELPERS GENERALES ──
 const JORNADAS = ['jornada1', 'jornada2', 'jornada3'];
+const TOTAL_POR_FASE_ELIM = {
+  dieciseisavos: 16,
+  octavos: 8,
+  cuartos: 4,
+  semifinal: 2,
+  tercer: 1,
+  final: 1
+};
 const FASES_ELIMINATORIAS_JUGADOR = [
   { fase: 'dieciseisavos', label: 'Dieciseisavos' },
   { fase: 'octavos', label: 'Octavos' },
@@ -63,7 +71,7 @@ const FASES_ELIMINATORIAS_JUGADOR = [
   { fase: 'tercer', label: '3er Lugar' },
   { fase: 'final', label: 'Final' }
 ];
-const TOTAL_PARTIDOS_MUNDIAL = 72; // Fase de grupos (3 jornadas × 24 partidos)
+const TOTAL_PARTIDOS_MUNDIAL = 104; // Fase de grupos + Eliminatorias (3 jornadas × 24 partidos + 32 partidos)
 
 function crearMapaResultados(snap, valor = 'lev') {
   const mapa = {};
@@ -82,10 +90,69 @@ function crearMapaPicks(predSnap) {
   return mapa;
 }
 
+// ── LISTENER ACTIVACIÓN EN TIEMPO REAL ──
+let _activacionInicializada = false;
+function iniciarListenerActivacion() {
+  onSnapshot(doc(db, 'jugadores', jugador.id), (snap) => {
+    if (!snap.exists()) return;
+    const activado = snap.data().activado === true;
+    if (activado) {
+      ocultarPantallaPago();
+    } else {
+      mostrarPantallaPago();
+    }
+    _activacionInicializada = true;
+  });
+}
+
+function mostrarPantallaPago() {
+  // Bloquear tabs
+  ['tab-miquiniela','tab-quinielas','tab-posiciones',
+   'tab-m-miquiniela','tab-m-quinielas','tab-m-posiciones'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = true;
+    btn.classList.add('tab-bloqueado');
+    btn.title = 'Activa tu cuenta para acceder';
+  });
+
+  // Mostrar banner de pago
+  const bannerPago = document.getElementById('banner-pago-activacion');
+  if (bannerPago) bannerPago.style.display = 'block';
+
+  // Ocultar contenido de inicio
+  ['bienvenido-title-wrap', 'stats-inicio-wrap', 'banners-inicio', 'card-inicio-jornada'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function ocultarPantallaPago() {
+  ['tab-miquiniela','tab-quinielas','tab-posiciones',
+   'tab-m-miquiniela','tab-m-quinielas','tab-m-posiciones'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = false;
+    btn.classList.remove('tab-bloqueado');
+    btn.title = '';
+  });
+
+  const bannerPago = document.getElementById('banner-pago-activacion');
+  if (bannerPago) bannerPago.style.display = 'none';
+
+  // Mostrar contenido de inicio
+  ['bienvenido-title-wrap', 'stats-inicio-wrap', 'banners-inicio', 'card-inicio-jornada'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = '';
+  });
+}
+
 // ── INIT ──
 window.addEventListener('load', async () => {
   document.getElementById('navbar-username').textContent = jugador.nombre;
   document.getElementById('menu-username').textContent   = jugador.nombre;
+
+  iniciarListenerActivacion();
 
   await cargarInicio();
 
@@ -131,6 +198,10 @@ function iniciarInicioRealtime() {
   );
 
   unsubscribeInicio.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderInicio)
+  );
+
+  unsubscribeInicio.push(
     onSnapshot(
       query(collection(db, 'predicciones'), where('jugadorId', '==', jugador.id || '')),
       programarRenderInicio
@@ -144,6 +215,7 @@ function iniciarInicioRealtime() {
 let bannerListener  = null;
 let badgesListener  = null;
 let configListener  = null;
+let resumenPredListener = null;
 let limiteTimer     = null;
 
 function iniciarConfigListener() {
@@ -153,7 +225,14 @@ function iniciarConfigListener() {
   }
 
   JORNADAS.forEach(jornada => {
-    onSnapshot(doc(db, 'config', `fechaLimite_${jornada}`), () => {
+    onSnapshot(doc(db, 'config', `fechaLimite_${jornada}`), (snap) => {
+      // Actualizar timestamp en memoria
+      if (snap.exists()) {
+        const limite = getFechaConfig(snap.data());
+        window[`_limiteTs_${jornada}`] = limite ? limite.getTime() : null;
+      } else {
+        window[`_limiteTs_${jornada}`] = null;
+      }
       if (seccionActiva === 'miquiniela') {
         const modoKey = getModoKey(jornada);
         window[modoKey] = false;
@@ -191,45 +270,50 @@ function iniciarTimerAparicion() {
   });
 }
 
+// Intervalo que revisa cada 10s si venció algún límite mientras el usuario está en Mi Quiniela
+let _limiteIntervalId = null;
 function iniciarTimerLimite() {
-  if (limiteTimer) {
-    clearTimeout(limiteTimer);
-    limiteTimer = null;
-  }
+  if (_limiteIntervalId) { clearInterval(_limiteIntervalId); _limiteIntervalId = null; }
 
+  const verificar = () => {
+    if (seccionActiva !== 'miquiniela') return;
+    const ahora = Date.now();
+    JORNADAS.forEach(jornada => {
+      const modoKey = getModoKey(jornada);
+      if (window[modoKey] !== true) return; // solo si está en edición
+      const limite = window[`_limiteTs_${jornada}`];
+      if (limite && ahora > limite) {
+        window[modoKey] = false;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => cargarMiQuiniela(), 100);
+      }
+    });
+  };
+
+  // Cargar límites en memoria desde config
   JORNADAS.forEach(jornada => {
     getDoc(doc(db, 'config', `fechaLimite_${jornada}`))
       .then(snap => {
-        if (!snap.exists()) return;
-
+        if (!snap.exists()) { window[`_limiteTs_${jornada}`] = null; return; }
         const limite = getFechaConfig(snap.data());
-        const ahora  = new Date();
-        const msRestantes = limite - ahora;
+        window[`_limiteTs_${jornada}`] = limite ? limite.getTime() : null;
 
-        if (msRestantes > 0) {
-          setTimeout(() => {
-            const modoKey = getModoKey(jornada);
+        // Si ya venció y está en edición, forzar salida inmediata
+        const modoKey = getModoKey(jornada);
+        if (window[`_limiteTs_${jornada}`] && Date.now() > window[`_limiteTs_${jornada}`]) {
+          if (window[modoKey] === true) {
             window[modoKey] = false;
-
             if (seccionActiva === 'miquiniela') {
-              const contenedor = document.getElementById('quiniela-contenido');
-
-              if (contenedor) {
-                const aviso = document.createElement('div');
-                aviso.className = 'reset-msg error';
-                aviso.textContent = `⏰ El tiempo límite de Jornada ${jornada.slice(-1)} ha terminado. Se conservaron tus picks guardados.`;
-                aviso.style.margin = '0 1.25rem 1rem';
-                contenedor.prepend(aviso);
-                setTimeout(() => aviso.remove(), 4000);
-              }
-
-              cargarMiQuiniela();
+              clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(() => cargarMiQuiniela(), 100);
             }
-          }, msRestantes);
+          }
         }
       })
       .catch(e => console.error(e));
   });
+
+  _limiteIntervalId = setInterval(verificar, 10000);
 }
 
 function iniciarBannerTiempoReal() {
@@ -243,86 +327,95 @@ function iniciarBannerTiempoReal() {
     badgesListener = null;
   }
 
-  bannerListener = onSnapshot(collection(db, 'resultados'), async (resSnap) => {
-    const totalRes   = resSnap.size;
-    const pendientes = Math.max(0, TOTAL_PARTIDOS_MUNDIAL - totalRes);
+  if (resumenPredListener) {
+    resumenPredListener();
+    resumenPredListener = null;
+  }
 
-    const resMap = {};
-    resSnap.docs.forEach(d => {
-      resMap[(d.data().partidoId || '').toLowerCase()] = d.data().lev;
-    });
-
-    let aciertos = 0;
-
+  const actualizarBanner = async () => {
     try {
-      const predSnap = await getDocs(query(
-        collection(db, 'predicciones'),
-        where('jugadorId', '==', jugador.id || '')
-      ));
+      const [resSnap, elimSnap, predSnap] = await Promise.all([
+        getDocs(collection(db, 'resultados')),
+        getDocs(collection(db, 'eliminatorias')),
+        getDocs(query(collection(db, 'predicciones'), where('jugadorId', '==', jugador.id || '')))
+      ]);
 
-      predSnap.docs.forEach(d => {
-        const { partidoId, pick } = d.data();
-        if (resMap[(partidoId || '').toLowerCase()] === pick) aciertos++;
-      });
-    } catch (e) {
-      console.error(e);
-    }
-
-    const resumen = document.getElementById('quiniela-resumen');
-    if (resumen) {
-      resumen.textContent = `Total acumulado: ${aciertos} aciertos de ${totalRes} partidos · ${pendientes} pendientes`;
-    }
-
-    const resJ = { jornada1: 0, jornada2: 0, jornada3: 0 };
-    const resMapJ = { jornada1: {}, jornada2: {}, jornada3: {} };
-
-    resSnap.docs.forEach(d => {
-      const data = d.data();
-      const jornada = data.jornada;
-
-      if (resJ[jornada] !== undefined) {
-        resJ[jornada]++;
-        resMapJ[jornada][(data.partidoId || '').toLowerCase()] = data.lev;
-      }
-    });
-
-    try {
-      const predSnap = await getDocs(query(
-        collection(db, 'predicciones'),
-        where('jugadorId', '==', jugador.id || '')
-      ));
-
-      const aciertosJ = { jornada1: 0, jornada2: 0, jornada3: 0 };
-
-      predSnap.docs.forEach(d => {
-        const { partidoId, pick, jornada } = d.data();
-        const res = resMapJ[jornada]?.[(partidoId || '').toLowerCase()];
-        if (res && res === pick) aciertosJ[jornada]++;
+      const resMap = {};
+      resSnap.docs.forEach(d => {
+        const data = d.data();
+        resMap[(data.partidoId || '').toLowerCase()] = data.lev;
       });
 
-      JORNADAS.forEach(j => {
-        const badge = document.getElementById(`badge-aciertos-${j}`);
+      const elimMap = {};
+      elimSnap.docs.forEach(d => {
+        const data = d.data();
 
-        if (badge) {
-          const total = resJ[j] > 0 ? resJ[j] : PARTIDOS_MUNDIAL[j]?.length || 24;
-          badge.textContent = `${aciertosJ[j]}/${total} aciertos`;
+        if (data.ganador) {
+          elimMap[d.id] = data.ganador;
         }
       });
 
-      if (seccionActiva === 'miquiniela' && !window._modoEdicionJornada1) {
-        clearTimeout(window._resultadosTimer);
-        window._resultadosTimer = setTimeout(() => cargarMiQuiniela(), 500);
+      const totalRes = resSnap.size + Object.keys(elimMap).length;
+      const pendientes = Math.max(0, TOTAL_PARTIDOS_MUNDIAL - totalRes);
+
+      let aciertos = 0;
+
+      predSnap.docs.forEach(d => {
+        const data = d.data();
+        const partidoId = data.partidoId || '';
+
+        const resultadoReal =
+          resMap[partidoId.toLowerCase()] ||
+          elimMap[partidoId];
+
+        if (resultadoReal && resultadoReal === data.pick) {
+          aciertos++;
+        }
+      });
+
+      const resumen = document.getElementById('quiniela-resumen');
+
+      if (resumen) {
+        resumen.textContent =
+          `Total acumulado: ${aciertos} aciertos de ${totalRes} partidos · ${pendientes} pendientes`;
       }
+
+      clearTimeout(window._bannerMiQuinielaTimer);
+      window._bannerMiQuinielaTimer = setTimeout(() => {
+        if (seccionActiva === 'miquiniela') {
+          cargarEliminatoriasJugador();
+        }
+      }, 300);
+
     } catch (e) {
-      console.error(e);
+      console.error('Error actualizando resumen quiniela:', e);
     }
-  });
+  };
+
+  bannerListener = onSnapshot(
+    collection(db, 'resultados'),
+    actualizarBanner
+  );
+
+  badgesListener = onSnapshot(
+    collection(db, 'eliminatorias'),
+    actualizarBanner
+  );
+
+  resumenPredListener = onSnapshot(
+    query(collection(db, 'predicciones'), where('jugadorId', '==', jugador.id || '')),
+    actualizarBanner
+  );
+
+  actualizarBanner();
 }
 
 let prediccionesListener = null;
 let totalPicksGuardados  = 0;
 let debounceTimer        = null;
 let inicioListener       = null;
+
+let resultadosListenerMQ = null;
 
 function iniciarPrediccionesListener() {
   if (prediccionesListener) {
@@ -341,12 +434,27 @@ function iniciarPrediccionesListener() {
         window._modoEdicionJornada1 = false;
         window._modoEdicionJornada2 = false;
         window._modoEdicionJornada3 = false;
+      }
 
+      if (seccionActiva === 'miquiniela') {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => cargarMiQuiniela(), 300);
       }
 
       totalPicksGuardados = nuevoTotal;
+    }
+  );
+
+  // Escuchar resultados para actualizar estado Finalizada/En curso en Mi Quiniela
+  if (resultadosListenerMQ) { resultadosListenerMQ(); resultadosListenerMQ = null; }
+  resultadosListenerMQ = onSnapshot(
+    collection(db, 'resultados'),
+    () => {
+      if (seccionActiva === 'miquiniela') {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => cargarMiQuiniela(), 300);
+      }
+      if (seccionActiva === 'inicio') cargarInicio();
     }
   );
 }
@@ -462,6 +570,7 @@ async function obtenerDatosQuiniela() {
     resJ1,
     resJ2,
     resJ3,
+    elimSnap,
     aparJ2,
     aparJ3
   ] = await Promise.all([
@@ -472,6 +581,7 @@ async function obtenerDatosQuiniela() {
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada1'))),
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada2'))),
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada3'))),
+    getDocs(collection(db, 'eliminatorias')),
     getDoc(doc(db, 'config', 'aparicion_jornada2')),
     getDoc(doc(db, 'config', 'aparicion_jornada3')),
   ]);
@@ -505,13 +615,31 @@ async function obtenerDatosQuiniela() {
     });
   });
 
-  const totalRes = resJ1.size + resJ2.size + resJ3.size;
+  const elimMap = {};
+
+  elimSnap.docs.forEach(d => {
+    const data = d.data();
+
+    if (data.ganador) {
+      elimMap[d.id] = data.ganador;
+    }
+  });
+
+  const totalRes = resJ1.size + resJ2.size + resJ3.size + Object.keys(elimMap).length;
+
   let totalAciertos = 0;
 
   predSnap.docs.forEach(d => {
     const { partidoId, pick } = d.data();
-    const res = resMapAll[(partidoId || '').toLowerCase()];
-    if (res && res.lev === pick) totalAciertos++;
+
+    const resGrupo = resMapAll[(partidoId || '').toLowerCase()];
+    const resElim  = elimMap[partidoId];
+
+    const resultadoReal = resGrupo?.lev || resElim;
+
+    if (resultadoReal && resultadoReal === pick) {
+      totalAciertos++;
+    }
   });
 
   const picksJ = { jornada1: 0, jornada2: 0, jornada3: 0 };
@@ -559,6 +687,18 @@ function renderMiQuiniela(datos) {
   return html;
 }
 
+// ── Estado de acordeones (persiste entre re-renders) ──
+const _acordeonEstado = {};
+
+function getAcordeonContraido(jornada, defaultContraido) {
+  if (jornada in _acordeonEstado) return _acordeonEstado[jornada];
+  return defaultContraido;
+}
+
+function setAcordeonEstado(jornada, contraido) {
+  _acordeonEstado[jornada] = contraido;
+}
+
 function renderJornadaQuiniela(jornada, idx, datos) {
   const num        = idx + 1;
   const limite     = datos.limites[jornada];
@@ -571,7 +711,8 @@ function renderJornadaQuiniela(jornada, idx, datos) {
   const modoKey    = getModoKey(jornada);
 
   const enModoEdicion = !tienePicks || window[modoKey] === true;
-  const contraido     = tienePicks && !enModoEdicion;
+  const defaultContraido = tienePicks && !enModoEdicion;
+  const contraido = getAcordeonContraido(jornada, defaultContraido);
 
   const resMapJ = crearMapaResultados(resSnap, 'lev');
 
@@ -808,9 +949,11 @@ window.toggleJornada = function(jornada) {
   if (!body) return;
 
   body.classList.toggle('contraido');
+  const estaContraido = body.classList.contains('contraido');
+  setAcordeonEstado(jornada, estaContraido);
 
   if (icon) {
-    icon.textContent = body.classList.contains('contraido') ? '▼' : '▲';
+    icon.textContent = estaContraido ? '▼' : '▲';
   }
 };
 
@@ -1056,6 +1199,10 @@ window.cargarQuinielas = function() {
     onSnapshot(collection(db, 'resultados'), programarRenderQuinielasRealtime)
   );
 
+  unsubscribeQuinielas.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderQuinielasRealtime)
+  );
+
   renderQuinielasRealtime();
 };
 
@@ -1066,11 +1213,12 @@ async function renderQuinielasRealtime() {
   if (!contenedor) return;
 
   try {
-    const [cfgSnap, jugSnap, predSnap, resSnap] = await Promise.all([
+    const [cfgSnap, jugSnap, predSnap, resSnap, elimSnap] = await Promise.all([
       getDoc(doc(db, 'config', 'quinielas')),
       getDocs(collection(db, 'jugadores')),
       getDocs(collection(db, 'predicciones')),
-      getDocs(collection(db, 'resultados'))
+      getDocs(collection(db, 'resultados')),
+      getDocs(collection(db, 'eliminatorias'))
     ]);
 
     const publicadas = cfgSnap.exists()
@@ -1107,6 +1255,22 @@ async function renderQuinielasRealtime() {
       resultadosMap[(data.partidoId || '').toLowerCase()] = data.lev;
     });
 
+    const eliminatoriasMap = {};
+    const eliminatoriasPartidos = [];
+
+    elimSnap.docs.forEach(d => {
+      const data = {
+        idDoc: d.id,
+        ...d.data()
+      };
+
+      eliminatoriasPartidos.push(data);
+
+      if (data.ganador) {
+        eliminatoriasMap[d.id] = data.ganador;
+      }
+    });
+
     const jugadoresConQuiniela = jugadores
         .filter(j =>
             prediccionesPorJugador[j.id] &&
@@ -1134,9 +1298,11 @@ async function renderQuinielasRealtime() {
     }
 
     contenedor.innerHTML = renderListadoQuinielas(
-      jugadoresConQuiniela,
+      jugadores,
       prediccionesPorJugador,
-      resultadosMap
+      resultadosMap,
+      eliminatoriasMap,
+      eliminatoriasPartidos
     );
 
   } catch (e) {
@@ -1166,52 +1332,197 @@ function renderQuinielasOcultas() {
   `;
 }
 
-function renderListadoQuinielas(jugadores, prediccionesPorJugador, resultadosMap) {
-  let html = `<div class="quinielas-grid">`;
+// ── ESTADO SELECCIÓN QUINIELAS ──
+function jugador_actual_id() { return jugador ? jugador.id : null; }
+let _qGridJugadores = [];
+let _qGridPredicciones = {};
+let _qGridResultados = {};
+let _qGridEliminatorias = {};
+let _qGridElimPartidos = [];
+let _qGridJugadorActivo = null;
 
-  jugadores.forEach((j, index) => {
+function renderListadoQuinielas(jugadores, prediccionesPorJugador, resultadosMap, eliminatoriasMap = {}, eliminatoriasPartidos = []) {
+  // Guardar estado para re-render al cambiar de jugador
+  _qGridJugadores = jugadores;
+  _qGridPredicciones = prediccionesPorJugador;
+  _qGridResultados = resultadosMap;
+  _qGridEliminatorias = eliminatoriasMap;
+  _qGridElimPartidos = eliminatoriasPartidos;
+
+  // Filtrar solo jugadores con predicciones
+  const jugadoresConPicks = jugadores.filter(j =>
+    prediccionesPorJugador[j.id] && prediccionesPorJugador[j.id].length > 0
+  );
+
+  // Mantener selección activa si sigue siendo válida
+  if (!_qGridJugadorActivo || !jugadoresConPicks.find(j => j.id === _qGridJugadorActivo)) {
+    _qGridJugadorActivo = jugadoresConPicks.length ? jugadoresConPicks[0].id : null;
+  }
+
+  // ── Selector de jugadores (tabs scrollable) ──
+  let tabsHtml = `<div class="qgrid-selector-wrap"><div class="qgrid-selector" id="qgrid-selector">`;
+  jugadoresConPicks.forEach((j, idx) => {
     const predicciones = prediccionesPorJugador[j.id] || [];
-    const aciertos = calcularAciertosJugador(predicciones, resultadosMap);
-    const total = predicciones.length;
+    const aciertos = calcularAciertosJugador(predicciones, resultadosMap, eliminatoriasMap);
+    const activo = j.id === _qGridJugadorActivo ? ' qgrid-tab-activo' : '';
+    tabsHtml += `
+      <button class="qgrid-tab${activo}" onclick="seleccionarJugadorGrid('${j.id}')" data-jugador-id="${j.id}">
+        <span class="qgrid-tab-nombre">${escapeHtml(j.nombre)}</span>
+        <span class="qgrid-tab-aciertos">${aciertos} ✓</span>
+      </button>`;
+  });
+  tabsHtml += `</div></div>`;
 
-    html += `
-      <div class="quiniela-jugador-card">
-        <div class="quiniela-jugador-header" onclick="toggleQuinielaJugador('${j.id}')">
-          <div>
-            <div class="quiniela-jugador-nombre">${index + 1}. ${escapeHtml(j.nombre)}</div>
-            <div class="quiniela-jugador-sub">${total} predicciones registradas</div>
-          </div>
+  // ── Panel de partidos del jugador activo ──
+  const panelHtml = `<div class="qgrid-panel" id="qgrid-panel">${renderPanelJugadorGrid(_qGridJugadorActivo)}</div>`;
 
-          <div class="quiniela-jugador-right">
-            <span class="quiniela-aciertos-badge">${aciertos} aciertos</span>
-            <span class="quiniela-arrow" id="arrow-quiniela-${j.id}">▼</span>
-          </div>
-        </div>
+  return tabsHtml + panelHtml;
+}
 
-        <div class="quiniela-jugador-body" id="body-quiniela-${j.id}" style="display:none;">
-          ${renderDetalleQuinielaJugador(predicciones, resultadosMap)}
-        </div>
+function renderPanelJugadorGrid(jugadorId) {
+  if (!jugadorId) return `<div class="text-center py-5" style="color:var(--text-muted);">Selecciona un jugador.</div>`;
+
+  const jugador = _qGridJugadores.find(j => j.id === jugadorId);
+  if (!jugador) return '';
+
+  const predicciones = _qGridPredicciones[jugadorId] || [];
+  const aciertos = calcularAciertosJugador(predicciones, _qGridResultados, _qGridEliminatorias);
+  const total = predicciones.length;
+  const esTu = jugador.id === jugador_actual_id();
+
+  let html = `
+    <div class="qgrid-jugador-banner">
+      <div class="qgrid-jugador-info">
+        <span class="qgrid-jugador-nombre">${escapeHtml(jugador.nombre)}</span>
+        ${esTu ? `<span class="qgrid-jugador-label">(tú)</span>` : ''}
+        <span class="qgrid-jugador-preds">${total} predicciones</span>
       </div>
-    `;
+      <span class="qgrid-jugador-aciertos">✓ ${aciertos} aciertos</span>
+    </div>`;
+
+  // Tarjetas de partido por jornada
+  JORNADAS.forEach(jornada => {
+    const predJornada = predicciones.filter(p => p.jornada === jornada);
+    if (!predJornada.length) return;
+
+    const picksMap = {};
+    predJornada.forEach(p => { picksMap[p.partidoId] = p.pick; });
+
+    const partidos = (PARTIDOS_MUNDIAL[jornada] || []).filter(p => picksMap[p.id]);
+    if (!partidos.length) return;
+
+    html += `<div class="qgrid-jornada-label">${getLabelJornada(jornada)}</div>`;
+    html += `<div class="qgrid-cards-grid">`;
+    partidos.forEach(partido => {
+      html += renderTarjetaPartidoGrid(partido, picksMap[partido.id], _qGridResultados, false);
+    });
+    html += `</div>`;
   });
 
-  html += `</div>`;
+  // Eliminatorias
+  FASES_ELIMINATORIAS_JUGADOR.forEach(cfg => {
+    const predFase = predicciones.filter(p => p.jornada === cfg.fase);
+    if (!predFase.length) return;
+
+    const picksMap = {};
+    predFase.forEach(p => { picksMap[p.partidoId] = p.pick; });
+
+    const partidosFase = _qGridElimPartidos
+      .filter(p => p.fase === cfg.fase)
+      .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0))
+      .filter(p => picksMap[p.idDoc]);
+
+    if (!partidosFase.length) return;
+
+    html += `<div class="qgrid-jornada-label">${cfg.label}</div>`;
+    html += `<div class="qgrid-cards-grid">`;
+    partidosFase.forEach(partido => {
+      html += renderTarjetaPartidoGrid(partido, picksMap[partido.idDoc], _qGridEliminatorias, true);
+    });
+    html += `</div>`;
+  });
 
   return html;
 }
 
-function calcularAciertosJugador(predicciones, resultadosMap) {
+function renderTarjetaPartidoGrid(partido, pick, mapaResultados, esEliminatoria) {
+  const local    = partido.local || '';
+  const visitante = esEliminatoria ? (partido.visita || partido.visitante || '') : (partido.visitante || '');
+  const flagL    = getFlag(local);
+  const flagV    = getFlag(visitante);
+
+  const idClave  = esEliminatoria ? partido.idDoc : (partido.id || '').toLowerCase();
+  const resultado = mapaResultados[idClave];
+
+  const acerto = resultado && resultado === pick;
+  const fallo  = resultado && resultado !== pick;
+  const pendiente = !resultado;
+
+  const esEmpate = pick === 'E';
+  const esLocal  = pick === 'L';
+
+  const pickNombre = esLocal ? local : esEmpate ? 'Empate' : visitante;
+  const flagPick   = esLocal ? flagL : esEmpate ? null : flagV;
+
+  // Clase del chip de pick
+  const pickChipClass = acerto ? 'qgrid-pick-chip ok' : fallo ? 'qgrid-pick-chip err' : 'qgrid-pick-chip pend';
+
+  // Resaltado de equipo ganador
+  const resaltaLocal    = esLocal && !esEmpate;
+  const resaltaVisitante = !esLocal && !esEmpate;
+
+  return `
+    <div class="qgrid-card${acerto ? ' qgrid-card-ok' : fallo ? ' qgrid-card-err' : ''}">
+      <div class="qgrid-card-equipos">
+        <div class="qgrid-equipo${resaltaLocal ? ' qgrid-equipo-activo' : ''}">
+          <img src="https://flagcdn.com/24x18/${flagL}.png" class="qgrid-bandera">
+          <span class="qgrid-equipo-nombre">${escapeHtml(local)}</span>
+        </div>
+        <div class="qgrid-vs">VS</div>
+        <div class="qgrid-equipo${resaltaVisitante ? ' qgrid-equipo-activo' : ''}">
+          <img src="https://flagcdn.com/24x18/${flagV}.png" class="qgrid-bandera">
+          <span class="qgrid-equipo-nombre">${escapeHtml(visitante)}</span>
+        </div>
+      </div>
+      <div class="${pickChipClass}">
+        ${flagPick ? `<img src="https://flagcdn.com/16x12/${flagPick}.png" class="qgrid-bandera-sm">` : ''}
+        <span>${escapeHtml(pickNombre)}</span>
+      </div>
+    </div>`;
+}
+
+window.seleccionarJugadorGrid = function(jugadorId) {
+  _qGridJugadorActivo = jugadorId;
+
+  // Actualizar tabs
+  document.querySelectorAll('#qgrid-selector .qgrid-tab').forEach(btn => {
+    btn.classList.toggle('qgrid-tab-activo', btn.dataset.jugadorId === jugadorId);
+  });
+
+  // Actualizar panel
+  const panel = document.getElementById('qgrid-panel');
+  if (panel) panel.innerHTML = renderPanelJugadorGrid(jugadorId);
+};
+
+function calcularAciertosJugador(predicciones, resultadosMap, eliminatoriasMap = {}) {
   let aciertos = 0;
 
   predicciones.forEach(p => {
-    const resultado = resultadosMap[(p.partidoId || '').toLowerCase()];
-    if (resultado && resultado === p.pick) aciertos++;
+    const partidoId = p.partidoId || '';
+
+    const resultado =
+      resultadosMap[partidoId.toLowerCase()] ||
+      eliminatoriasMap[partidoId];
+
+    if (resultado && resultado === p.pick) {
+      aciertos++;
+    }
   });
 
   return aciertos;
 }
 
-function renderDetalleQuinielaJugador(predicciones, resultadosMap) {
+function renderDetalleQuinielaJugador(predicciones, resultadosMap, eliminatoriasMap = {}, eliminatoriasPartidos = []) {
   let html = '';
 
   JORNADAS.forEach(jornada => {
@@ -1223,6 +1534,23 @@ function renderDetalleQuinielaJugador(predicciones, resultadosMap) {
       <div class="quiniela-jornada-block">
         <div class="quiniela-jornada-title">${getLabelJornada(jornada)}</div>
         ${renderPrediccionesJornadaJugador(jornada, predJornada, resultadosMap)}
+      </div>
+    `;
+  });
+
+  FASES_ELIMINATORIAS_JUGADOR.forEach(cfg => {
+    const predFase = predicciones.filter(p => p.jornada === cfg.fase);
+
+    if (!predFase.length) return;
+
+    const partidosFase = eliminatoriasPartidos
+      .filter(p => p.fase === cfg.fase)
+      .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+    html += `
+      <div class="quiniela-jornada-block">
+        <div class="quiniela-jornada-title">${cfg.label}</div>
+        ${renderPrediccionesEliminatoriaJugador(partidosFase, predFase, eliminatoriasMap)}
       </div>
     `;
   });
@@ -1253,6 +1581,80 @@ function renderPrediccionesJornadaJugador(jornada, predicciones, resultadosMap) 
   });
 
   return html;
+}
+
+function renderPrediccionesEliminatoriaJugador(partidos, predicciones, eliminatoriasMap) {
+  const picksMap = {};
+
+  predicciones.forEach(p => {
+    picksMap[p.partidoId] = p.pick;
+  });
+
+  let html = '';
+
+  partidos.forEach((partido, index) => {
+    const pick = picksMap[partido.idDoc];
+
+    if (!pick) return;
+
+    html += renderFilaQuinielaEliminatoriaJugador(partido, index + 1, pick, eliminatoriasMap);
+  });
+
+  return html;
+}
+
+function renderFilaQuinielaEliminatoriaJugador(partido, numero, pick, eliminatoriasMap) {
+  const flagLocal = getFlag(partido.local);
+  const flagVisit = getFlag(partido.visita);
+
+  const resultado = eliminatoriasMap[partido.idDoc];
+
+  const acerto = resultado && resultado === pick;
+  const fallo  = resultado && resultado !== pick;
+
+  const textoPick = pick === 'L'
+    ? partido.local
+    : partido.visita;
+
+  const flagPick = pick === 'L'
+    ? flagLocal
+    : flagVisit;
+
+  const pickClass = pick === 'L'
+    ? 'pick-local'
+    : 'pick-visitante';
+
+  let estadoHtml = `<span class="quiniela-pick-pendiente">•</span>`;
+
+  if (acerto) {
+    estadoHtml = `<span class="quiniela-pick-ok">✓</span>`;
+  } else if (fallo) {
+    estadoHtml = `<span class="quiniela-pick-error">✗</span>`;
+  }
+
+  return `
+    <div class="quiniela-pick-row quiniela-pick-row-compacta">
+      <div class="quiniela-pick-num">${numero}</div>
+
+      <div class="quiniela-equipo">
+        <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+        <span>${partido.local}</span>
+      </div>
+
+      <div class="quiniela-vs">VS</div>
+
+      <div class="quiniela-equipo">
+        <img src="https://flagcdn.com/24x18/${flagVisit}.png" class="bandera-sm">
+        <span>${partido.visita}</span>
+      </div>
+
+      <div class="quiniela-pick-seleccion ${pickClass}">
+        <img src="https://flagcdn.com/16x12/${flagPick}.png" class="bandera-sm">
+        <span>${textoPick}</span>
+        ${estadoHtml}
+      </div>
+    </div>
+  `;
 }
 
 function renderFilaQuinielaJugador(partido, numero, pick, resultadosMap) {
@@ -1854,31 +2256,65 @@ window.cargarInicio = async function() {
       return;
     }
 
-    const jornada = obtenerJornadaActiva(datos.sizes);
-    const resActiva = obtenerMapaResultadoPorJornada(jornada, datos.resMaps);
+    const faseActiva = obtenerJornadaActiva(
+      datos.sizes,
+      datos.eliminatorias,
+      datos.configMap
+    );
 
-    actualizarTituloJornadaInicio(jornada);
-    renderBannersInicio(jornada, datos.sizes, datos.resMaps);
-    renderListaPartidosInicio(jornada, resActiva);
+    actualizarTituloJornadaInicio(faseActiva);
+
+    renderBannersInicio(
+      faseActiva,
+      datos.sizes,
+      datos.resMaps,
+      datos.eliminatorias,
+      datos.configMap
+    );
+
+    if (JORNADAS.includes(faseActiva)) {
+      renderListaPartidosInicio(
+        faseActiva,
+        obtenerMapaResultadoPorJornada(faseActiva, datos.resMaps)
+      );
+    } else {
+      renderListaEliminatoriaInicio(faseActiva, datos.eliminatorias);
+    }
+
   } catch (e) {
     console.error('Error cargarInicio:', e);
   }
 };
 
 async function obtenerDatosInicio() {
-  const [resJ1, resJ2, resJ3, predSnap] = await Promise.all([
+  const [resJ1, resJ2, resJ3, elimSnap, cfgSnap, predSnap] = await Promise.all([
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada1'))),
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada2'))),
     getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada3'))),
+    getDocs(collection(db, 'eliminatorias')),
+    getDocs(collection(db, 'config')),
     getDocs(query(collection(db, 'predicciones'), where('jugadorId', '==', jugador.id || '')))
   ]);
 
-  const totalResultados = resJ1.size + resJ2.size + resJ3.size;
+  const eliminatorias = elimSnap.docs.map(d => ({
+    idDoc: d.id,
+    ...d.data()
+  }));
+
+  const configMap = {};
+  cfgSnap.docs.forEach(d => {
+    configMap[d.id] = d.data();
+  });
+
+  const resultadosElim = eliminatorias.filter(p => p.ganador).length;
+  const totalResultados = resJ1.size + resJ2.size + resJ3.size + resultadosElim;
 
   return {
     totalResultados,
     porJugar: Math.max(0, TOTAL_PARTIDOS_MUNDIAL - totalResultados),
     tieneQuiniela: predSnap.size > 0,
+    eliminatorias,
+    configMap,
     sizes: {
       jornada1: resJ1.size,
       jornada2: resJ2.size,
@@ -1920,9 +2356,31 @@ function renderMensajeSinQuiniela() {
   `;
 }
 
-function obtenerJornadaActiva(sizes) {
+function obtenerJornadaActiva(sizes, eliminatorias = [], configMap = {}) {
   if (sizes.jornada1 < 24) return 'jornada1';
   if (sizes.jornada2 < 24) return 'jornada2';
+  if (sizes.jornada3 < 24) return 'jornada3';
+
+  let ultimaFaseVisible = null;
+
+  for (const cfg of FASES_ELIMINATORIAS_JUGADOR) {
+    const partidos = eliminatorias.filter(p => p.fase === cfg.fase);
+
+    if (!faseEliminatoriaVisibleInicio(cfg, partidos, configMap)) continue;
+
+    ultimaFaseVisible = cfg.fase;
+
+    const resultados = partidos.filter(p => p.ganador).length;
+    const total = TOTAL_POR_FASE_ELIM[cfg.fase] || partidos.length;
+
+    // Primera eliminatoria visible que todavía no termina queda abierta
+    if (resultados < total) return cfg.fase;
+  }
+
+  // Si todas las eliminatorias visibles ya terminaron,
+  // deja abierta la última fase visible, no Jornada 3.
+  if (ultimaFaseVisible) return ultimaFaseVisible;
+
   return 'jornada3';
 }
 
@@ -1930,37 +2388,84 @@ function obtenerMapaResultadoPorJornada(jornada, resMaps) {
   return resMaps[jornada] || {};
 }
 
+function faseEliminatoriaVisibleInicio(cfg, partidos, configMap) {
+  if (!partidos.length) return false;
+
+  const tieneResultados = partidos.some(p => p.ganador);
+
+  const aparicion = configMap[`aparicion_${cfg.fase}`];
+
+  if (!aparicion) {
+    return tieneResultados;
+  }
+
+  const fechaAparicion = getFechaConfig(aparicion);
+
+  return new Date() >= fechaAparicion || tieneResultados;
+}
+
 function actualizarTituloJornadaInicio(jornada) {
   const tituloEl = document.getElementById('inicio-jornada-titulo');
 
-  if (tituloEl) {
+  if (!tituloEl) return;
+
+  if (JORNADAS.includes(jornada)) {
     tituloEl.textContent = `Partidos — ${getLabelJornada(jornada)}`;
+    return;
   }
+
+  const fase = FASES_ELIMINATORIAS_JUGADOR.find(f => f.fase === jornada);
+  tituloEl.textContent = `Partidos — ${fase?.label || 'Eliminatorias'}`;
 }
 
-function renderBannersInicio(jornadaActiva, sizes, resMaps) {
+function renderBannersInicio(jornadaActiva, sizes, resMaps, eliminatorias = [], configMap = {}) {
   let bannersHtml = '';
 
   for (const jornada of JORNADAS) {
     if (jornada === jornadaActiva || sizes[jornada] === 0) continue;
 
-    bannersHtml += renderBannerJornadaInicio(jornada, sizes[jornada], resMaps[jornada]);
+    bannersHtml += renderBannerJornadaInicio(
+      jornada,
+      sizes[jornada],
+      resMaps[jornada]
+    );
   }
+
+  const ahora = new Date();
+
+  FASES_ELIMINATORIAS_JUGADOR.forEach(cfg => {
+    if (cfg.fase === jornadaActiva) return;
+
+    const partidos = eliminatorias
+      .filter(p => p.fase === cfg.fase)
+      .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+    if (!faseEliminatoriaVisibleInicio(cfg, partidos, configMap)) return;
+
+    const resultados = partidos.filter(p => p.ganador).length;
+
+    bannersHtml += renderBannerEliminatoriaInicio(cfg, partidos, resultados);
+  });
 
   const bannersEl = document.getElementById('banners-inicio');
-
-  if (bannersEl) {
-    bannersEl.innerHTML = bannersHtml;
-  }
+  if (bannersEl) bannersEl.innerHTML = bannersHtml;
 }
 
 function renderBannerJornadaInicio(jornada, totalResultados, resMap) {
   return `
     <div class="banner-jornada-fin mb-2" id="banner-inicio-${jornada}">
       <div class="banner-jornada-header" onclick="toggleBannerInicio('${jornada}')">
-        <span class="banner-jornada-titulo">${getLabelJornada(jornada)} — Finalizada</span>
-        <span class="banner-jornada-sub">${totalResultados}/24 resultados</span>
-        <span class="banner-jornada-arrow" id="arrow-inicio-${jornada}">▼</span>
+        <span class="banner-jornada-titulo">
+          ${getLabelJornada(jornada)} — Finalizada
+        </span>
+
+        <span class="banner-jornada-sub">
+          ${totalResultados}/24 resultados
+        </span>
+
+        <span class="banner-jornada-arrow" id="arrow-inicio-${jornada}">
+          ▼
+        </span>
       </div>
 
       <div class="banner-jornada-body" id="body-inicio-${jornada}" style="display:none;">
@@ -1970,9 +2475,103 @@ function renderBannerJornadaInicio(jornada, totalResultados, resMap) {
   `;
 }
 
+function renderBannerEliminatoriaInicio(cfg, partidos, resultados) {
+  return `
+    <div class="banner-jornada-fin mb-2" id="banner-inicio-${cfg.fase}">
+      <div class="banner-jornada-header" onclick="toggleBannerInicio('${cfg.fase}')">
+        <span class="banner-jornada-titulo">
+          ${cfg.label} — ${resultados >= partidos.length ? 'Finalizada' : 'En curso'}
+        </span>
+
+        <span class="banner-jornada-sub">
+          ${resultados}/${partidos.length} resultados
+        </span>
+
+        <span class="banner-jornada-arrow" id="arrow-inicio-${cfg.fase}">
+          ▼
+        </span>
+      </div>
+
+      <div class="banner-jornada-body" id="body-inicio-${cfg.fase}" style="display:none;">
+        ${partidos.map((p, i) => renderFilaEliminatoriaInicio(p, i + 1)).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function renderListaPartidosInicio(jornada, resMap) {
   document.getElementById('lista-partidos').innerHTML = '<div id="lista-partidos-activa"></div>';
   renderPartidosJornada(jornada, resMap);
+}
+
+function renderListaEliminatoriaInicio(fase, eliminatorias) {
+  const contenedor = document.getElementById('lista-partidos');
+
+  const partidos = eliminatorias
+    .filter(p => p.fase === fase)
+    .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+  contenedor.innerHTML = partidos.map((p, i) =>
+    renderFilaEliminatoriaInicio(p, i + 1)
+  ).join('');
+}
+
+function renderFilaEliminatoriaInicio(p, num) {
+  const flagLocal = getFlag(p.local);
+  const flagVisit = getFlag(p.visita);
+  const tieneRes = !!p.ganador;
+
+  return `
+    <div class="estado-row ${tieneRes ? 'con-resultado' : ''}">
+      <table class="estado-tabla">
+        <tr>
+          <td class="estado-td-num">${num}</td>
+
+          <td class="estado-td-local">
+            <div class="inner">
+              <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+              <span class="estado-nombre">${p.local}</span>
+            </div>
+          </td>
+
+          <td class="estado-td-vs">vs</td>
+
+          <td class="estado-td-visit">
+            <div class="inner">
+              <img src="https://flagcdn.com/24x18/${flagVisit}.png" class="bandera-sm">
+              <span class="estado-nombre">${p.visita}</span>
+            </div>
+          </td>
+
+          <td class="estado-td-res">
+            ${renderResultadoEliminatoriaInicio(p, flagLocal, flagVisit)}
+          </td>
+
+          <td class="estado-td-fecha">
+            <span class="estado-fecha-hora">${p.fecha} · ${p.hora}</span>
+            <span class="estado-estadio">${p.estadio}</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+function renderResultadoEliminatoriaInicio(p, flagLocal, flagVisit) {
+  if (!p.ganador) {
+    return `<div class="estado-pendiente">—</div>`;
+  }
+
+  const ganadorNombre = p.ganador === 'L' ? p.local : p.visita;
+  const flag = p.ganador === 'L' ? flagLocal : flagVisit;
+
+  return `
+    <div class="estado-resultado">
+      <img src="https://flagcdn.com/16x12/${flag}.png" class="bandera-sm">
+      <span class="estado-res-nombre">${ganadorNombre}</span>
+      <span class="estado-check">✓</span>
+    </div>
+  `;
 }
 
 function renderPartidosJornada(jornada, resMap) {
@@ -2249,7 +2848,8 @@ function renderFaseEliminatoriaJugador(cfg, partidos, configMap, picksEliminator
   const modoKey = `_modoEdicion_${cfg.fase}`;
 
   const enModoEdicion = !tienePicks || window[modoKey] === true;
-  const contraido = tienePicks && !enModoEdicion;
+  const defaultContraido = tienePicks && !enModoEdicion;
+  const contraido = getAcordeonContraido(cfg.fase, defaultContraido);
 
   return `
     <div class="elim-jugador-fase">
@@ -2257,7 +2857,13 @@ function renderFaseEliminatoriaJugador(cfg, partidos, configMap, picksEliminator
       <div class="jornada-picks-header" onclick="toggleElimJugador('${cfg.fase}')">
         <div class="d-flex align-items-center gap-2 flex-wrap">
           <span class="jornada-picks-titulo">
-            🏆 ${cfg.label}${tienePicks && !enModoEdicion ? ' — EN CURSO' : ' — Llena tus picks'}
+            🏆 ${cfg.label}${
+              stats.resultados >= partidos.length
+                ? ' — FINALIZADA'
+                : tienePicks && !enModoEdicion
+                  ? ' — EN CURSO'
+                  : ' — Llena tus picks'
+            }
           </span>
           <span class="jornada-aciertos-badge">
             ${stats.aciertos}/${partidos.length} aciertos
@@ -2457,9 +3063,11 @@ window.toggleElimJugador = function(fase) {
   if (!body) return;
 
   body.classList.toggle('contraido');
+  const estaContraido = body.classList.contains('contraido');
+  setAcordeonEstado(fase, estaContraido);
 
   if (icon) {
-    icon.textContent = body.classList.contains('contraido') ? '▼' : '▲';
+    icon.textContent = estaContraido ? '▼' : '▲';
   }
 };
 
@@ -2541,6 +3149,8 @@ window.guardarPicksEliminatoria = async function(fase) {
     }
 
     showToast(`✅ ${guardados} predicciones guardadas.`, 'success');
+
+    window[`_modoEdicion_${fase}`] = false;
 
     setTimeout(() => {
       cargarEliminatoriasJugador();

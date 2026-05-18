@@ -1436,7 +1436,9 @@ body::before {
   align-items: center;
   padding: 1rem 1.25rem;
   border-bottom: 1px solid rgba(255,255,255,0.06);
-  transition: background .2s ease, transform .2s ease;
+  border-radius: 0.6rem;
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), background 0.22s, box-shadow 0.22s, border-color 0.22s;
+  cursor: default;
 }
 
 .posiciones-row:last-child {
@@ -1444,7 +1446,12 @@ body::before {
 }
 
 .posiciones-row:hover {
-  background: rgba(255,255,255,0.04);
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(245,197,24,0.06);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,197,24,0.15);
+  border-bottom-color: transparent;
+  z-index: 1;
+  position: relative;
 }
 
 .posiciones-row.top1 {
@@ -2661,4 +2668,551 @@ table tbody tr:hover {
   border-color: #00c896;
   background: rgba(0,104,71,0.35);
   color: #6fe0a8;
+}
+
+/* ══════════════════════════════════════════════
+   QUINIELAS — GRID VIEW (vista tarjetas)
+══════════════════════════════════════════════ */
+
+/* Selector de jugadores */
+.qgrid-selector-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin-bottom: 1rem;
+}
+.qgrid-selector-wrap::-webkit-scrollbar { display: none; }
+
+.qgrid-selector {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem 0.1rem;
+  min-width: max-content;
+}
+
+.qgrid-tab {
+  background: var(--card-bg);
+  border: 1px solid rgba(245,197,24,0.18);
+  border-radius: 999px;
+  color: var(--text-muted);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.qgrid-tab:hover {
+  border-color: rgba(245,197,24,0.45);
+  color: #fff;
+}
+
+.qgrid-tab-activo {
+  background: rgba(245,197,24,0.15) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold) !important;
+}
+
+.qgrid-tab-nombre {
+  font-size: 0.83rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.qgrid-tab-aciertos {
+  font-size: 0.7rem;
+  color: #6fe0a8;
+  font-weight: 700;
+}
+
+/* Banner del jugador activo */
+.qgrid-jugador-banner {
+  background: linear-gradient(135deg, rgba(245,197,24,0.28) 0%, rgba(180,140,0,0.18) 100%);
+  border: 1px solid rgba(245,197,24,0.7);
+  border-radius: 0.85rem;
+  padding: 0.65rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.qgrid-jugador-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.qgrid-jugador-nombre {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.25rem;
+  color: #fff;
+  letter-spacing: 1.5px;
+}
+
+.qgrid-jugador-label {
+  font-size: 0.78rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.qgrid-jugador-preds {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.qgrid-jugador-preds {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.qgrid-jugador-aciertos {
+  font-size: 0.8rem;
+  color: #6fe0a8;
+  font-weight: 800;
+  background: rgba(0,104,71,0.2);
+  border: 1px solid rgba(0,104,71,0.4);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+}
+
+/* Etiqueta de jornada */
+.qgrid-jornada-label {
+  font-family: 'Bebas Neue', sans-serif;
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 1.5px;
+  margin: 0.75rem 0 0.5rem;
+  padding-left: 0.15rem;
+}
+
+/* Grid de tarjetas */
+.qgrid-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Tarjeta de partido */
+.qgrid-card {
+  background: #08080f;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.85rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), border-color 0.22s, box-shadow 0.22s;
+  cursor: default;
+}
+
+.qgrid-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: rgba(245,197,24,0.45);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,197,24,0.15);
+}
+
+.qgrid-card-ok {
+  border-color: rgba(111,224,168,0.3);
+  background: linear-gradient(135deg, rgba(0,80,40,0.4) 0%, #08080f 100%);
+}
+
+.qgrid-card-err {
+  border-color: rgba(255,107,122,0.22);
+  background: linear-gradient(135deg, rgba(80,20,20,0.4) 0%, #08080f 100%);
+}
+
+/* Equipos dentro de la tarjeta */
+.qgrid-card-equipos {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+.qgrid-equipo {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+  opacity: 0.7;
+}
+
+.qgrid-equipo:last-child { justify-content: flex-end; }
+
+.qgrid-equipo-activo {
+  opacity: 1;
+}
+
+.qgrid-equipo-activo .qgrid-equipo-nombre {
+  color: #fff;
+  font-weight: 800;
+}
+
+.qgrid-equipo-nombre {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qgrid-vs {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.qgrid-bandera {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.qgrid-bandera-sm {
+  width: 14px;
+  height: 10px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+/* Chip del pick */
+.qgrid-pick-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.qgrid-pick-chip.pend {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-muted);
+}
+
+.qgrid-pick-chip.ok {
+  background: rgba(0,104,71,0.25);
+  border: 1px solid #006847;
+  color: #6fe0a8;
+}
+
+.qgrid-pick-chip.err {
+  background: rgba(255,107,122,0.15);
+  border: 1px solid rgba(255,107,122,0.4);
+  color: #ff8a96;
+}
+
+/* Panel contenedor */
+.qgrid-panel {
+  animation: fadeInPanel 0.2s ease;
+}
+
+@keyframes fadeInPanel {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══ RESPONSIVE — Quinielas grid view ══ */
+
+/* Base: evitar desbordamiento en el banner */
+.qgrid-jugador-banner {
+  overflow: hidden;
+}
+.qgrid-jugador-info {
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 0.1rem;
+}
+.qgrid-jugador-nombre {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.qgrid-jugador-preds {
+  white-space: nowrap;
+}
+.qgrid-jugador-aciertos {
+  flex-shrink: 0;
+}
+
+/* 768px - 900px */
+@media (max-width: 900px) and (min-width: 768px) {
+  .qgrid-jugador-nombre   { font-size: 1.1rem; }
+  .qgrid-jugador-preds    { font-size: 0.68rem; }
+  .qgrid-jugador-aciertos { font-size: 0.75rem; }
+  .qgrid-cards-grid       { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
+/* 501px - 767px */
+@media (max-width: 767px) and (min-width: 501px) {
+  .qgrid-jugador-banner   { padding: 0.6rem 0.9rem; }
+  .qgrid-jugador-nombre   { font-size: 1rem; letter-spacing: 1px; }
+  .qgrid-jugador-label    { font-size: 0.7rem; }
+  .qgrid-jugador-preds    { font-size: 0.65rem; }
+  .qgrid-jugador-aciertos { font-size: 0.7rem; padding: 0.18rem 0.5rem; }
+  .qgrid-tab              { padding: 0.35rem 0.75rem; font-size: 0.78rem; }
+  .qgrid-tab-nombre       { font-size: 0.78rem; }
+  .qgrid-cards-grid       { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .qgrid-equipo-nombre    { font-size: 0.7rem; max-width: 70px; }
+  .qgrid-jornada-label    { font-size: 0.9rem; }
+}
+
+/* 351px - 500px */
+@media (max-width: 500px) and (min-width: 351px) {
+  .qgrid-jugador-banner   { padding: 0.55rem 0.8rem; flex-wrap: wrap; gap: 0.3rem; }
+  .qgrid-jugador-nombre   { font-size: 0.95rem; letter-spacing: 0.8px; }
+  .qgrid-jugador-label    { font-size: 0.65rem; }
+  .qgrid-jugador-preds    { font-size: 0.62rem; }
+  .qgrid-jugador-aciertos { font-size: 0.68rem; padding: 0.15rem 0.45rem; }
+  .qgrid-tab              { padding: 0.3rem 0.65rem; font-size: 0.75rem; }
+  .qgrid-tab-nombre       { font-size: 0.75rem; }
+  .qgrid-tab-aciertos     { font-size: 0.62rem; }
+  .qgrid-cards-grid       { grid-template-columns: repeat(2, 1fr); gap: 0.4rem; }
+  .qgrid-card             { padding: 0.55rem 0.65rem 0.5rem; }
+  .qgrid-equipo-nombre    { display: none; }
+  .qgrid-pick-chip        { font-size: 0.68rem; padding: 0.18rem 0.5rem; }
+  .qgrid-jornada-label    { font-size: 0.85rem; }
+  .qgrid-bandera          { width: 22px; height: 16px; }
+}
+
+/* max 350px */
+@media (max-width: 350px) {
+  .qgrid-jugador-banner   { padding: 0.5rem 0.7rem; flex-wrap: wrap; gap: 0.25rem; }
+  .qgrid-jugador-nombre   { font-size: 0.88rem; letter-spacing: 0.5px; }
+  .qgrid-jugador-label    { font-size: 0.6rem; }
+  .qgrid-jugador-preds    { font-size: 0.58rem; }
+  .qgrid-jugador-aciertos { font-size: 0.62rem; padding: 0.12rem 0.4rem; }
+  .qgrid-tab              { padding: 0.28rem 0.55rem; font-size: 0.7rem; }
+  .qgrid-tab-nombre       { font-size: 0.7rem; }
+  .qgrid-tab-aciertos     { font-size: 0.58rem; }
+  .qgrid-cards-grid       { grid-template-columns: repeat(2, 1fr); gap: 0.35rem; }
+  .qgrid-card             { padding: 0.5rem 0.55rem 0.45rem; border-radius: 0.65rem; }
+  .qgrid-equipo-nombre    { display: none; }
+  .qgrid-pick-chip        { font-size: 0.62rem; padding: 0.15rem 0.4rem; }
+  .qgrid-jornada-label    { font-size: 0.8rem; }
+  .qgrid-bandera          { width: 18px; height: 13px; }
+}
+
+
+/* ══ HOVER LIFT — Inicio, Mi Quiniela ══ */
+
+.estado-row,
+.partido-pick,
+.quiniela-pick-row {
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.22s,
+    border-color 0.22s,
+    box-shadow 0.22s;
+  cursor: default;
+}
+
+.estado-row:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(245,197,24,0.06);
+  border-color: rgba(245,197,24,0.25);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,197,24,0.1);
+  position: relative;
+  z-index: 1;
+}
+
+.partido-pick:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(245,197,24,0.05);
+  border-bottom-color: transparent;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,197,24,0.12);
+  border-radius: 0.7rem;
+  position: relative;
+  z-index: 1;
+}
+
+.quiniela-pick-row:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(245,197,24,0.07);
+  border-color: rgba(245,197,24,0.3);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,197,24,0.12);
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ══ HOVER LIFT — Mi Quiniela picks guardados ══ */
+
+.pick-compacto {
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.22s,
+    border-color 0.22s,
+    box-shadow 0.22s;
+  border-radius: 0.5rem;
+  cursor: default;
+}
+
+.pick-compacto:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(245,197,24,0.06);
+  border-bottom-color: transparent;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(245,197,24,0.12);
+  border-radius: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+
+
+
+/* ══════════════════════════════════════════════
+   BANNER PAGO / ACTIVACIÓN
+══════════════════════════════════════════════ */
+
+.pago-banner-wrap {
+  text-align: center;
+  padding: 2rem 1rem 1.5rem;
+  max-width: 520px;
+  margin: 0 auto 2rem;
+  background: rgba(10,10,15,0.85);
+  border: 1px solid rgba(245,197,24,0.3);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pago-banner-icon {
+  font-size: 2.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.pago-banner-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+
+.pago-banner-desc {
+  font-size: 0.88rem;
+  color: #ccc;
+  margin-bottom: 1.25rem;
+  line-height: 1.55;
+}
+
+.pago-banner-card {
+  background: rgba(245,197,24,0.07);
+  border: 1px solid rgba(245,197,24,0.25);
+  border-radius: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  margin: 0 auto 1.25rem;
+  text-align: left;
+}
+
+.pago-monto {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  color: var(--gold);
+  text-align: center;
+  letter-spacing: 2px;
+  margin-bottom: 0.85rem;
+}
+
+.pago-monto span {
+  font-size: 1rem;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+.pago-banner-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.pago-dato {
+  font-size: 0.88rem;
+  color: #ddd;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pago-dato:last-child { border-bottom: none; }
+
+.pago-dato span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  min-width: 60px;
+  font-weight: 700;
+}
+
+.pago-tarjeta {
+  font-family: monospace;
+  font-size: 1rem !important;
+  letter-spacing: 1px;
+  color: #fff !important;
+}
+
+.pago-banner-comprobante {
+  font-size: 0.88rem;
+  color: #ccc;
+  margin-bottom: 0.6rem;
+  line-height: 1.6;
+}
+
+.pago-telefono {
+  display: block;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-decoration: none;
+  margin-top: 0.2rem;
+}
+
+.pago-telefono:hover { color: #fff; }
+
+.pago-banner-nota {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  font-style: italic;
+}
+
+/* Tabs bloqueados */
+.tab-bloqueado {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  position: relative;
+}
+
+.tab-bloqueado::after {
+  content: '🔒';
+  font-size: 0.65rem;
+  margin-left: 0.3rem;
 }

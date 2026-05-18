@@ -74,12 +74,38 @@
     <section class="seccion active" id="sec-inicio">
       <div class="container-fluid">
 
+        <!-- Banner de activación (oculto por defecto) -->
+        <div id="banner-pago-activacion" style="display:none;">
+          <div class="pago-banner-wrap">
+            <div class="pago-banner-icon">🏆</div>
+            <h2 class="pago-banner-titulo">¡Bienvenido a la Quiniela Mundialista 2026!</h2>
+            <p class="pago-banner-desc">Para activar tu cuenta y acceder a todas las secciones, necesitas realizar el depósito de inscripción.</p>
+
+            <div class="pago-banner-card">
+              <div class="pago-monto">$200 <span>pesos</span></div>
+              <div class="pago-banner-label">Datos bancarios</div>
+              <div class="pago-dato"><span>Titular</span> Erick Jair Ponce Aguilar</div>
+              <div class="pago-dato"><span>Banco</span> Banamex</div>
+              <div class="pago-dato pago-tarjeta"><span>Tarjeta</span> 5256 7845 5611 8999</div>
+              <div class="pago-dato pago-tarjeta"><span>CLABE</span> 002180905423573548</div>
+            </div>
+
+            <div class="pago-banner-comprobante">
+              📲 Envía tu comprobante de pago al número:
+              <a href="tel:5633502716" class="pago-telefono">56 3350 2716</a>
+            </div>
+            <p class="pago-banner-nota">Una vez confirmado tu pago, el administrador activará tu cuenta.</p>
+          </div>
+        </div>
+
         <!-- Bienvenido -->
-        <h2 class="bienvenido-title">Bienvenido</h2>
-        <p class="bienvenido-sub" id="bienvenido-sub">Cargando...</p>
+        <div id="bienvenido-title-wrap" style="display:none;">
+          <h2 class="bienvenido-title">Bienvenido</h2>
+          <p class="bienvenido-sub" id="bienvenido-sub">Cargando...</p>
+        </div>
 
         <!-- Stats -->
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4" id="stats-inicio-wrap" style="display:none;">
           <div class="col-4">
             <div class="stat-card">
               <div class="stat-number" id="stat-partidos">—</div>
@@ -101,10 +127,10 @@
         </div>
 
         <!-- Banners jornadas finalizadas (fuera de la card) -->
-        <div id="banners-inicio"></div>
+        <div id="banners-inicio" style="display:none;"></div>
 
         <!-- Partidos de la jornada -->
-        <div class="jornada-card" id="card-inicio-jornada">
+        <div class="jornada-card" id="card-inicio-jornada" style="display:none;">
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div class="jornada-header mb-0" id="inicio-jornada-titulo">Partidos de la Jornada</div>
             <span class="inicio-live-badge">

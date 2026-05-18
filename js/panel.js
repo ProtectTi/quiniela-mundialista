@@ -2398,6 +2398,7 @@ window.cargarJugadores = function() {
 
   if (!tbody) return;
 
+  iniciarListenerReset();
   detenerJugadoresAdminRealtime();
 
   tbody.innerHTML = `
@@ -2587,12 +2588,18 @@ async function renderJugadoresAdminRealtime() {
           </td>
 
           <td>
-            <button
-              class="btn-eliminar"
-              onclick="eliminarJugador('${d.id}', '${escapeHtml(j.nombre).replace(/'/g, "&#39;")}')"
-            >
-              🗑 Eliminar
-            </button>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+              ${j.activado
+                ? `<button class="btn-activado" onclick="desactivarJugador('${d.id}')">✓ Activo</button>`
+                : `<button class="btn-activar" onclick="activarJugador('${d.id}')">⚡ Activar</button>`
+              }
+              <button
+                class="btn-eliminar"
+                onclick="eliminarJugador('${d.id}', '${escapeHtml(j.nombre).replace(/'/g, "&#39;")}')"
+              >
+                🗑
+              </button>
+            </div>
           </td>
 
         </tr>
@@ -2620,6 +2627,24 @@ async function renderJugadoresAdminRealtime() {
   }
 
 }
+
+window.activarJugador = async function(id) {
+  try {
+    await setDoc(doc(db, 'jugadores', id), { activado: true }, { merge: true });
+  } catch(e) {
+    console.error(e);
+    alert('Error al activar jugador.');
+  }
+};
+
+window.desactivarJugador = async function(id) {
+  try {
+    await setDoc(doc(db, 'jugadores', id), { activado: false }, { merge: true });
+  } catch(e) {
+    console.error(e);
+    alert('Error al desactivar jugador.');
+  }
+};
 
 window.eliminarJugador = async function(id, nombre) {
   if (!confirm(`¿Eliminar al jugador "${nombre}"? Esto no se puede deshacer.`)) return;
@@ -3677,5 +3702,80 @@ window.generarFinal = async function() {
   } catch(e) {
     console.error(e);
     alert('❌ Error al generar final.');
+  }
+};
+// ══════════════════════════════════════════════
+// SOLICITUDES DE RESET DE CONTRASEÑA
+// ══════════════════════════════════════════════
+
+let _unsubReset = null;
+
+async function hashPasswordPanel(pass) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pass);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function iniciarListenerReset() {
+  if (_unsubReset) return;
+
+  const q = query(
+    collection(db, 'solicitudesReset'),
+    where('estado', '==', 'pendiente')
+  );
+
+  _unsubReset = onSnapshot(q, snap => {
+    const card  = document.getElementById('card-reset-solicitudes');
+    const lista = document.getElementById('reset-solicitudes-lista');
+    const badge = document.getElementById('reset-badge');
+
+    if (!card || !lista || !badge) return;
+
+    const docs = snap.docs;
+    badge.textContent = `${docs.length} pendiente${docs.length !== 1 ? 's' : ''}`;
+    card.style.display = docs.length > 0 ? 'block' : 'none';
+
+    if (!docs.length) {
+      lista.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Sin solicitudes pendientes.</p>';
+      return;
+    }
+
+    lista.innerHTML = docs.map(d => {
+      const dato = d.data();
+      return `
+        <div class="reset-solicitud-row">
+          <div class="reset-sol-info">
+            <span class="reset-sol-nombre">${dato.nombre}</span>
+            <span class="reset-sol-hint">Contraseña temporal: <strong>mundial2026</strong></span>
+          </div>
+          <button class="btn-reset-aprobar" onclick="aprobarReset('${d.id}','${dato.jugadorId}')">
+            Resetear
+          </button>
+        </div>`;
+    }).join('');
+  });
+}
+
+window.aprobarReset = async function(solicitudId, jugadorId) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Procesando...';
+
+  try {
+    const passHash = await hashPasswordPanel('mundial2026');
+
+    // Actualizar contraseña del jugador
+    await setDoc(doc(db, 'jugadores', jugadorId), { password: passHash }, { merge: true });
+
+    // Marcar solicitud como resuelta
+    await setDoc(doc(db, 'solicitudesReset', solicitudId), { estado: 'resuelta' }, { merge: true });
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al resetear contraseña.');
+    btn.disabled = false;
+    btn.textContent = 'Resetear';
   }
 };
