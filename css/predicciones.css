@@ -3299,16 +3299,28 @@ table tbody tr:hover {
 
 /* Responsive */
 @media (max-width: 600px) {
-  .mundial-countdown-titulo { font-size: 0.82rem; }
-  .mundial-countdown-inner  { padding: 0.75rem 1rem; }
-  .mundial-cd-unit span     { font-size: 1.5rem; }
-  .mundial-countdown-right  { gap: 0.75rem; }
+  .mundial-countdown-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+    gap: 0.65rem;
+  }
+  .mundial-countdown-left  { width: 100%; }
+  .mundial-countdown-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0;
+    border-top: 1px solid rgba(245,197,24,0.15);
+    padding-top: 0.55rem;
+  }
+  .mundial-cd-unit span    { font-size: 1.6rem; }
+  .mundial-cd-unit small   { font-size: 0.6rem; }
+  .mundial-countdown-titulo { font-size: 0.85rem; white-space: normal; }
 }
 
 @media (max-width: 400px) {
-  .mundial-countdown-logo   { width: 34px; height: 34px; }
-  .mundial-countdown-titulo { font-size: 0.75rem; }
-  .mundial-countdown-fechas { font-size: 0.65rem; }
-  .mundial-cd-unit span     { font-size: 1.3rem; }
-  .mundial-countdown-right  { gap: 0.55rem; }
+  .mundial-countdown-logo  { width: 36px; height: 36px; }
+  .mundial-countdown-titulo { font-size: 0.8rem; }
+  .mundial-countdown-fechas { font-size: 0.68rem; }
+  .mundial-cd-unit span    { font-size: 1.45rem; }
 }
