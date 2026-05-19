@@ -4,7 +4,7 @@
 // Solo cachea assets estáticos (HTML, CSS, JS, imágenes)
 // ══════════════════════════════════════
 
-const CACHE_NAME = 'quiniela-2026-v10';
+const CACHE_NAME = 'quiniela-2026-v11';
 
 const ASSETS_TO_CACHE = [
   './jugador.html',
