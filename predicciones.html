@@ -31,7 +31,7 @@
     </button>
 
     <!-- Logo + Título -->
-    <a class="navbar-brand-area" href="#">
+    <a class="navbar-brand-area" href="#" onclick="location.reload(); return false;" style="cursor:pointer;">
       <img src="img/logo.png" alt="Logo" class="navbar-logo" />
       <span class="navbar-title">
         <span class="gold">Quiniela </span><span class="mexico">Mundialista</span>
@@ -73,6 +73,25 @@
     <!-- INICIO -->
     <section class="seccion active" id="sec-inicio">
       <div class="container-fluid">
+
+        <!-- Countdown Mundial -->
+        <div id="mundial-countdown-wrap" class="mundial-countdown-wrap">
+          <div class="mundial-countdown-inner">
+            <div class="mundial-countdown-left">
+              <img src="img/copa.jpg" class="mundial-countdown-logo">
+              <div>
+                <div class="mundial-countdown-titulo">Copa Mundial de la FIFA 2026™</div>
+                <div class="mundial-countdown-fechas">11 de junio – 19 de julio de 2026</div>
+              </div>
+            </div>
+            <div class="mundial-countdown-right" id="mundial-countdown-timer">
+              <div class="mundial-cd-unit"><span id="cd-dias">--</span><small>días</small></div>
+              <div class="mundial-cd-unit"><span id="cd-horas">--</span><small>horas</small></div>
+              <div class="mundial-cd-unit"><span id="cd-min">--</span><small>min</small></div>
+              <div class="mundial-cd-unit"><span id="cd-seg">--</span><small>seg.</small></div>
+            </div>
+          </div>
+        </div>
 
         <!-- Banner de activación (oculto por defecto) -->
         <div id="banner-pago-activacion" style="display:none;">

@@ -3197,3 +3197,51 @@ window.activarModoEdicionEliminatoria = function(fase) {
   window[`_modoEdicion_${fase}`] = true;
   cargarEliminatoriasJugador();
 };
+// ══════════════════════════════════════════════
+// COUNTDOWN MUNDIAL 2026
+// ══════════════════════════════════════════════
+(function() {
+  const TARGET = new Date('2026-06-11T13:00:00-06:00').getTime(); // 11 jun 2026, 1pm hora CDMX
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function actualizar() {
+    const ahora = Date.now();
+    const diff  = TARGET - ahora;
+
+    if (diff <= 0) {
+      // Ya empezó el mundial — mostrar en cero
+      document.getElementById('cd-dias').textContent  = '00';
+      document.getElementById('cd-horas').textContent = '00';
+      document.getElementById('cd-min').textContent   = '00';
+      document.getElementById('cd-seg').textContent   = '00';
+
+      // Cambiar subtexto
+      const fechas = document.querySelector('.mundial-countdown-fechas');
+      if (fechas) fechas.textContent = '¡El Mundial ya comenzó! ⚽';
+      return;
+    }
+
+    const dias  = Math.floor(diff / 86400000);
+    const horas = Math.floor((diff % 86400000) / 3600000);
+    const min   = Math.floor((diff % 3600000)  / 60000);
+    const seg   = Math.floor((diff % 60000)    / 1000);
+
+    document.getElementById('cd-dias').textContent  = pad(dias);
+    document.getElementById('cd-horas').textContent = pad(horas);
+    document.getElementById('cd-min').textContent   = pad(min);
+    document.getElementById('cd-seg').textContent   = pad(seg);
+  }
+
+  // Esperar a que existan los elementos
+  document.addEventListener('DOMContentLoaded', () => {
+    actualizar();
+    setInterval(actualizar, 1000);
+  });
+
+  // También ejecutar si DOMContentLoaded ya pasó
+  if (document.readyState !== 'loading') {
+    actualizar();
+    setInterval(actualizar, 1000);
+  }
+})();
