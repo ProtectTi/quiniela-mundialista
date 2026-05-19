@@ -4,7 +4,6 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
   runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
@@ -210,8 +209,7 @@ window.iniciarSesion = async function() {
     const docJugador = snap.docs[0];
     const jugador = docJugador.data();
 
-    const passwordCorrecta =
-      jugador.password === passHash || jugador.password === pass;
+    const passwordCorrecta = jugador.password === passHash;
 
     if (!passwordCorrecta) {
       registrarIntentoFallido();

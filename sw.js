@@ -4,11 +4,12 @@
 // Solo cachea assets estáticos (HTML, CSS, JS, imágenes)
 // ══════════════════════════════════════
 
-const CACHE_NAME = 'quiniela-2026-v6';
+const CACHE_NAME = 'quiniela-2026-v7';
 
 const ASSETS_TO_CACHE = [
   './jugador.html',
   './predicciones.html',
+  './reset.html',
   './admin.html',
   './panel.html',
   './404.html',
@@ -19,6 +20,7 @@ const ASSETS_TO_CACHE = [
   './js/partidos.js',
   './js/jugador.js',
   './js/predicciones.js',
+  './js/reset.js',
   './js/admin.js',
   './js/panel.js',
   './js/firebase/config.js',
@@ -27,6 +29,7 @@ const ASSETS_TO_CACHE = [
   './js/utils/toasts.js',
   './img/logo.png',
   './img/cancha.png',
+  './img/copa.jpg',
   './manifest.json'
 ];
 

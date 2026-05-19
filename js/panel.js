@@ -3718,7 +3718,7 @@ async function hashPasswordPanel(pass) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function iniciarListenerReset() {
+function iniciarListenerReset() {
   if (_unsubReset) return;
 
   const q = query(
