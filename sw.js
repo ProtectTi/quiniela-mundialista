@@ -4,7 +4,7 @@
 // Solo cachea assets estáticos (HTML, CSS, JS, imágenes)
 // ══════════════════════════════════════
 
-const CACHE_NAME = 'quiniela-2026-v12';
+const CACHE_NAME = 'quiniela-2026-v13';
 
 const ASSETS_TO_CACHE = [
   './jugador.html',
@@ -21,6 +21,8 @@ const ASSETS_TO_CACHE = [
   './js/jugador.js',
   './js/predicciones.js',
   './js/reset.js',
+  './elegir-usuario.html',
+  './js/elegir-usuario.js',
   './js/admin.js',
   './js/panel.js',
   './js/firebase/config.js',

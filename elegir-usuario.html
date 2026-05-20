@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elige tu usuario — Quiniela Mundialista 2026</title>
+  <meta name="theme-color" content="#1a1a2e" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/jugador.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <div class="wrapper">
+    <div class="auth-card">
+      <h1 class="brand-title">
+        <span class="gold">Quiniela</span><span class="mexico">Mundialista</span>
+      </h1>
+      <p class="brand-sub">Copa Mundial de la FIFA 2026</p>
+
+      <div class="reset-page-header">
+        <span class="reset-page-icon">👤</span>
+        <div>
+          <div class="reset-page-titulo">Elige tu usuario</div>
+          <div class="reset-page-sub" id="migracion-sub">A partir de ahora usarás un usuario para entrar</div>
+        </div>
+      </div>
+
+      <div class="alert-custom" id="alertMsg"></div>
+
+      <div id="form-usuario">
+        <div class="mb-field">
+          <label class="form-label-custom">Nombre de usuario</label>
+          <input type="text" class="input-custom" id="nuevo-usuario" placeholder="Ej: juanp26 (sin espacios)" maxlength="30" autocomplete="off" />
+          <small class="input-hint">Solo letras, números y guión bajo. Esto es lo que usarás para iniciar sesión.</small>
+        </div>
+        <button class="btn-gold" id="btn-guardar" onclick="guardarUsuario()">Guardar y entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="js/elegir-usuario.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

@@ -2567,6 +2567,9 @@ async function renderJugadoresAdminRealtime() {
             <span class="jugador-nombre">
               ${escapeHtml(j.nombre)}
             </span>
+            <span style="display:block; font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
+              @${j.usuario ? escapeHtml(j.usuario) : '<em>sin usuario</em>'}
+            </span>
           </td>
 
           <td>

@@ -38,17 +38,14 @@ async function hashPassword(pass) {
 
 // ── RESTABLECER CONTRASEÑA ──
 window.solicitarReset = async function() {
-  const nombre = document.getElementById('reset-nombre').value.trim();
+  const usuario = document.getElementById('reset-usuario').value.trim().toLowerCase();
   const pass1  = document.getElementById('reset-pass1').value;
   const pass2  = document.getElementById('reset-pass2').value;
 
   hideAlert();
 
-  if (!nombre)
-    return showAlert('Por favor ingresa tu nombre completo.', 'error');
-
-  if (!/^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s\-\.]+$/.test(nombre))
-    return showAlert('Nombre inválido. Solo letras y espacios.', 'error');
+  if (!usuario)
+    return showAlert('Por favor ingresa tu usuario.', 'error');
 
   if (pass1.length < 4)
     return showAlert('La nueva contraseña debe tener al menos 4 caracteres.', 'error');
@@ -59,11 +56,11 @@ window.solicitarReset = async function() {
   setLoading(true);
 
   try {
-    const q    = query(collection(db, 'jugadores'), where('nombreKey', '==', nombre.toLowerCase()));
+    const q    = query(collection(db, 'jugadores'), where('usuario', '==', usuario));
     const snap = await getDocs(q);
 
     if (snap.empty) {
-      showAlert('No se encontró una cuenta con ese nombre.', 'error');
+      showAlert('No se encontró una cuenta con ese usuario.', 'error');
       setLoading(false);
       return;
     }
@@ -75,7 +72,7 @@ window.solicitarReset = async function() {
 
     showAlert('✅ Contraseña actualizada. Redirigiendo...', 'success');
 
-    document.getElementById('reset-nombre').value = '';
+    document.getElementById('reset-usuario').value = '';
     document.getElementById('reset-pass1').value  = '';
     document.getElementById('reset-pass2').value  = '';
 

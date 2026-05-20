@@ -9,20 +9,30 @@ service cloud.firestore {
     match /jugadores/{jugadorId} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll([
-                      'nombre', 'nombreKey', 'password', 'creadoEn'
+                      'nombre', 'nombreKey', 'usuario', 'password', 'creadoEn'
                     ])
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() >= 2
                     && request.resource.data.nombre.size() <= 50
+                    && request.resource.data.usuario is string
+                    && request.resource.data.usuario.size() >= 3
+                    && request.resource.data.usuario.size() <= 30
                     && request.resource.data.password is string
                     && request.resource.data.password.size() == 64; // SHA-256 hex
       // Permite actualizar SOLO el campo password (reset de contraseña sin auth)
+      // Permite actualizar SOLO el campo usuario (migración de jugadores viejos)
       // El campo activado solo lo puede cambiar el admin autenticado
       allow update: if request.auth != null
                     || (
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password'])
                       && request.resource.data.password is string
                       && request.resource.data.password.size() == 64
+                    )
+                    || (
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usuario'])
+                      && request.resource.data.usuario is string
+                      && request.resource.data.usuario.size() >= 3
+                      && request.resource.data.usuario.size() <= 30
                     );
       allow delete: if request.auth != null;
     }
