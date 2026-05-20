@@ -1053,64 +1053,6 @@ body::before {
   gap: 0.85rem;
 }
 
-.quiniela-jugador-card {
-  background: var(--card-bg);
-  border: 1px solid rgba(245,197,24,0.12);
-  border-radius: 1rem;
-  overflow: hidden;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.quiniela-jugador-header {
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.quiniela-jugador-nombre {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 1.15rem;
-  color: #fff;
-  letter-spacing: 1.2px;
-}
-
-.quiniela-jugador-sub {
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.quiniela-jugador-right {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  flex-shrink: 0;
-}
-
-.quiniela-aciertos-badge {
-  background: rgba(0, 104, 71, 0.2);
-  border: 1px solid #006847;
-  color: #6fe0a8;
-  font-weight: 800;
-  font-size: 0.75rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 999px;
-}
-
-.quiniela-arrow {
-  color: var(--gold);
-  font-weight: 900;
-}
-
-.quiniela-jugador-body {
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 0.75rem;
-}
-
 .quiniela-jornada-block {
   margin-bottom: 1rem;
 }
@@ -2254,14 +2196,6 @@ button:active,
 .quiniela-card:hover,
 .grupo-card:hover,
 .partido-card:hover,
-.partido-pick:hover {
-  transform: translateY(-2px);
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.28),
-    0 0 0 1px rgba(245,197,24,0.08);
-}
-
 /* BADGES */
 .badge,
 .grupo-pts,

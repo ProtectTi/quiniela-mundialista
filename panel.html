@@ -706,5 +706,42 @@
       });
     }
   </script>
+  <!-- ── MODAL RESET PICKS JUGADOR ── -->
+  <div id="modal-reset-picks" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-reset-card">
+      <div class="modal-reset-header">
+        <div>
+          <div class="modal-reset-titulo">🔄 Resetear predicciones</div>
+          <div class="modal-reset-sub" id="modal-reset-jugador-nombre">—</div>
+        </div>
+        <button class="modal-reset-close" onclick="cerrarModalResetPicks()">✕</button>
+      </div>
+
+      <p class="modal-reset-desc">Selecciona las jornadas o fases que quieres resetear para este jugador:</p>
+
+      <div class="modal-reset-opciones" id="modal-reset-opciones">
+        <label class="modal-reset-chk"><input type="checkbox" value="jornada1"> Jornada 1</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="jornada2"> Jornada 2</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="jornada3"> Jornada 3</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="dieciseisavos"> Dieciseisavos</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="octavos"> Octavos</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="cuartos"> Cuartos</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="semifinal"> Semifinal</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="tercer"> 3er Lugar</label>
+        <label class="modal-reset-chk"><input type="checkbox" value="final"> Final</label>
+      </div>
+
+      <div class="modal-reset-acciones">
+        <button class="modal-reset-btn-todos" onclick="toggleTodosResetPicks()">Seleccionar todas</button>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="modal-reset-btn-cancelar" onclick="cerrarModalResetPicks()">Cancelar</button>
+          <button class="modal-reset-btn-confirmar" id="btn-confirmar-reset-picks" onclick="confirmarResetPicks()">Resetear selección</button>
+        </div>
+      </div>
+
+      <div class="reset-msg" id="modal-reset-msg" style="display:none; margin-top:0.75rem;"></div>
+    </div>
+  </div>
+
 </body>
 </html>

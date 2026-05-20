@@ -75,17 +75,10 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
-    // ── ELIMINATORIAS ──
-		match /eliminatorias/{docId} {
-  		allow read: if true;
-  		allow write: if request.auth != null;
-		}
-
-    // ── SOLICITUDES RESET ──
-    match /solicitudesReset/{docId} {
-      allow create: if request.resource.data.keys().hasAll(['jugadorId','nombre','estado','creadoEn'])
-                    && request.resource.data.estado == 'pendiente';
-      allow read, update, delete: if request.auth != null;
+    // ── ELIMINATORIAS (colección general) ──
+    match /eliminatorias/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
 
     // ── Bloquear todo lo demás ──

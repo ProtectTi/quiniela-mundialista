@@ -171,6 +171,11 @@ function cargarDashboard() {
     onSnapshot(doc(db, 'config', 'quinielas'), programarRenderDashboardAdmin)
   );
 
+  // Escuchar cambios en eliminatorias (colección única)
+  unsubscribeDashboardAdmin.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderDashboardAdmin)
+  );
+
   renderDashboardAdminRealtime();
 }
 
@@ -178,86 +183,84 @@ async function renderDashboardAdminRealtime() {
   try {
     await cargarEstadoPublicacionQuinielas();
 
-    const [jugSnap, predSnap, resJ1, resJ2, resJ3] = await Promise.all([
+    // Cargar jornadas + todas las fases eliminatorias
+    const TOTAL_MUNDIAL = 104;
+    const totalPartidosPorFase = {
+      jornada1: 24, jornada2: 24, jornada3: 24,
+      dieciseisavos: 16, octavos: 8, cuartos: 4,
+      semifinal: 2, tercer: 1, final: 1
+    };
+
+    const [jugSnap, predSnap, resJ1, resJ2, resJ3, elimSnap] = await Promise.all([
       getDocs(collection(db, 'jugadores')),
-      getDocs(query(collection(db, 'predicciones'), where('jornada', '==', faseActiva))),
+      getDocs(collection(db, 'predicciones')),
       getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada1'))),
       getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada2'))),
       getDocs(query(collection(db, 'resultados'), where('jornada', '==', 'jornada3'))),
+      getDocs(collection(db, 'eliminatorias'))
     ]);
 
     // Registrados
-    animarNumero(
-      document.getElementById('stat-registrados'),
-      jugSnap.size
-    );
+    animarNumero(document.getElementById('stat-registrados'), jugSnap.size);
 
-    // Con quiniela
+    // Con quiniela — jugadores con al menos un pick en la fase activa
+    // Para eliminatorias, faseActiva es el key ('16avos') pero jornada guardada es cfg.firestore ('dieciseisavos')
+    const faseActivaJornada = FASES_ELIMINATORIAS[faseActiva]?.firestore ?? faseActiva;
     const conQuiniela = new Set(
-      predSnap.docs.map(d => d.data().jugadorId).filter(Boolean)
+      predSnap.docs
+        .filter(d => d.data().jornada === faseActivaJornada)
+        .map(d => d.data().jugadorId)
+        .filter(Boolean)
     ).size;
+    animarNumero(document.getElementById('stat-conquiniela'), conQuiniela);
 
-    animarNumero(
-      document.getElementById('stat-conquiniela'),
-      conQuiniela
-    );
+    // Resultados eliminatorias — solo los que tienen ganador
+    const elimConGanador = elimSnap.docs.filter(d => d.data().ganador);
+    const totalResultadosGrupos = resJ1.size + resJ2.size + resJ3.size;
+    const totalResultados = totalResultadosGrupos + elimConGanador.length;
 
-    // Resultados acumulados
-    const totalResultados = resJ1.size + resJ2.size + resJ3.size;
+    animarNumero(document.getElementById('stat-resultados'), totalResultados);
+    animarNumero(document.getElementById('stat-porjugar'), Math.max(0, TOTAL_MUNDIAL - totalResultados));
 
-    const resActiva =
-      faseActiva === 'jornada1'
-        ? resJ1
-        : faseActiva === 'jornada2'
-          ? resJ2
-          : resJ3;
+    // Estado de partidos jornada/fase activa
+    if (['jornada1','jornada2','jornada3'].includes(faseActiva)) {
+      const resActiva = faseActiva === 'jornada1' ? resJ1 : faseActiva === 'jornada2' ? resJ2 : resJ3;
+      const resMap = {};
+      resActiva.docs.forEach(d => { resMap[(d.data().partidoId || '').toLowerCase()] = d.data(); });
+      renderEstadoPartidos(resMap);
+    } else {
+      renderEstadoPartidosElim(faseActiva);
+    }
 
-    animarNumero(
-      document.getElementById('stat-resultados'),
-      totalResultados
-    );
-    animarNumero(
-      document.getElementById('stat-porjugar'),
-      Math.max(0, 24 - resActiva.size)
-    );
+    // Mapas para banners
+    const resMapJ1 = {}, resMapJ2 = {}, resMapJ3 = {};
+    resJ1.docs.forEach(d => { resMapJ1[(d.data().partidoId || '').toLowerCase()] = d.data(); });
+    resJ2.docs.forEach(d => { resMapJ2[(d.data().partidoId || '').toLowerCase()] = d.data(); });
+    resJ3.docs.forEach(d => { resMapJ3[(d.data().partidoId || '').toLowerCase()] = d.data(); });
 
-    // Mapa de resultados jornada activa
-    const resMap = {};
-
-    resActiva.docs.forEach(d => {
-      resMap[(d.data().partidoId || '').toLowerCase()] = d.data();
+    // Agrupar eliminatorias por fase para banners
+    const elimPorFase = {};
+    elimSnap.docs.forEach(d => {
+      const data = d.data();
+      const fase = data.fase;
+      if (!fase) return;
+      if (!elimPorFase[fase]) elimPorFase[fase] = [];
+      elimPorFase[fase].push({ idDoc: d.id, ...data });
     });
 
-    renderEstadoPartidos(resMap);
-
-    // Banners jornadas finalizadas
-    const resMapJ1 = {};
-    const resMapJ2 = {};
-    const resMapJ3 = {};
-
-    resJ1.docs.forEach(d => {
-      resMapJ1[(d.data().partidoId || '').toLowerCase()] = d.data();
-    });
-
-    resJ2.docs.forEach(d => {
-      resMapJ2[(d.data().partidoId || '').toLowerCase()] = d.data();
-    });
-
-    resJ3.docs.forEach(d => {
-      resMapJ3[(d.data().partidoId || '').toLowerCase()] = d.data();
+    // Sizes de eliminatorias (solo con ganador)
+    const sizesElim = {};
+    Object.keys(totalPartidosPorFase).forEach(f => {
+      if (!['jornada1','jornada2','jornada3'].includes(f)) {
+        sizesElim[f] = (elimPorFase[f] || []).filter(p => p.ganador).length;
+      }
     });
 
     renderBannersFinalizados(
-      {
-        jornada1: resMapJ1,
-        jornada2: resMapJ2,
-        jornada3: resMapJ3
-      },
-      {
-        jornada1: resJ1.size,
-        jornada2: resJ2.size,
-        jornada3: resJ3.size
-      }
+      { jornada1: resMapJ1, jornada2: resMapJ2, jornada3: resMapJ3 },
+      { jornada1: resJ1.size, jornada2: resJ2.size, jornada3: resJ3.size, ...sizesElim },
+      totalPartidosPorFase,
+      elimPorFase
     );
 
   } catch(e) {
@@ -320,23 +323,103 @@ function renderEstadoPartidos(resMap) {
   contenedor.innerHTML = html;
 }
 
-function renderBannersFinalizados(resMaps, sizes) {
+// ── Render partidos de fase eliminatoria activa ──
+async function renderEstadoPartidosElim(fase) {
+  const contenedor = document.getElementById('estado-partidos');
+  if (!contenedor) return;
+
+  const cfg = FASES_ELIMINATORIAS[fase];
+  if (!cfg) return;
+
+  try {
+    // Todo está en la colección 'eliminatorias' con campo fase = cfg.firestore
+    const snap = await getDocs(
+      query(collection(db, 'eliminatorias'), where('fase', '==', cfg.firestore))
+    );
+
+    if (snap.empty) {
+      contenedor.innerHTML = `<p style="color:var(--text-muted); padding:1rem; font-size:0.85rem;">Aún no hay partidos registrados para ${cfg.label}.</p>`;
+      return;
+    }
+
+    const partidos = snap.docs
+      .map(d => ({ idDoc: d.id, ...d.data() }))
+      .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
+
+    let num  = 1;
+    let html = '';
+
+    partidos.forEach(p => {
+      const local     = p.local     || p.equipoLocal  || p.slotLocal  || '—';
+      const visitante = p.visita    || p.equipoVisita  || p.slotVisita || '—';
+      const flagL     = BANDERAS[local]     || 'un';
+      const flagV     = BANDERAS[visitante] || 'un';
+      const tieneRes  = p.ganador;
+      const ganadorNombre = p.ganador === 'L' ? local : p.ganador === 'V' ? visitante : '';
+      const flagG     = BANDERAS[ganadorNombre] || 'un';
+
+      const resHtml = tieneRes
+        ? `<div class="estado-resultado">
+             <img src="https://flagcdn.com/16x12/${flagG}.png" class="bandera-sm">
+             <span class="estado-res-nombre">${ganadorNombre}</span>
+             <span class="estado-check">✓</span>
+           </div>`
+        : `<div class="estado-pendiente">—</div>`;
+
+      html += `
+        <div class="estado-row ${tieneRes ? 'con-resultado' : ''}">
+          <table class="estado-tabla">
+            <tr>
+              <td class="estado-td-num">${num++}</td>
+              <td class="estado-td-local">
+                <div class="inner">
+                  <img src="https://flagcdn.com/24x18/${flagL}.png" class="bandera-sm">
+                  <span class="estado-nombre">${local}</span>
+                </div>
+              </td>
+              <td class="estado-td-vs">vs</td>
+              <td class="estado-td-visit">
+                <div class="inner">
+                  <img src="https://flagcdn.com/24x18/${flagV}.png" class="bandera-sm">
+                  <span class="estado-nombre">${visitante}</span>
+                </div>
+              </td>
+              <td class="estado-td-res">${resHtml}</td>
+              <td class="estado-td-fecha">
+                <span class="estado-fecha-hora">${p.fecha || ''} · ${p.hora || ''}</span>
+                <span class="estado-estadio">${p.estadio || ''}</span>
+              </td>
+            </tr>
+          </table>
+        </div>`;
+    });
+
+    contenedor.innerHTML = html;
+  } catch(e) {
+    console.error('renderEstadoPartidosElim:', e);
+  }
+}
+
+function renderBannersFinalizados(resMaps, sizes, totalPorFase = {}, elimPorFase = {}) {
   const contenedor = document.getElementById('banners-jornadas');
   if (!contenedor) return;
 
   let html = '';
 
+  // Jornadas 1-2-3
+  const labelsJornada = { jornada1: 'Jornada 1', jornada2: 'Jornada 2', jornada3: 'Jornada 3' };
   for (const jornada of ['jornada1', 'jornada2', 'jornada3']) {
     if (jornada === faseActiva || sizes[jornada] === 0) continue;
-
-    const label = jornada === 'jornada1' ? 'Jornada 1' : jornada === 'jornada2' ? 'Jornada 2' : 'Jornada 3';
+    const total = totalPorFase[jornada] || 24;
+    const finalizada = sizes[jornada] >= total;
+    const label = labelsJornada[jornada];
     const partidosHtml = generarPartidosJornada(jornada, resMaps[jornada]);
 
     html += `
       <div class="banner-jornada-fin" id="banner-${jornada}">
         <div class="banner-jornada-header" onclick="toggleBannerJornada('${jornada}')">
-          <span class="banner-jornada-titulo">${label} — Finalizada</span>
-          <span class="banner-jornada-sub">${sizes[jornada]}/24 resultados</span>
+          <span class="banner-jornada-titulo">${label}${finalizada ? ' — Finalizada' : ''}</span>
+          <span class="banner-jornada-sub">${sizes[jornada]}/${total} resultados</span>
           <span class="banner-jornada-arrow" id="arrow-${jornada}">▼</span>
         </div>
         <div class="banner-jornada-body" id="body-${jornada}" style="display:none;">
@@ -345,7 +428,87 @@ function renderBannersFinalizados(resMaps, sizes) {
       </div>`;
   }
 
+  // Eliminatorias — usando elimPorFase que viene de la colección 'eliminatorias'
+  const fasesElimOrden = ['dieciseisavos','octavos','cuartos','semifinal','tercer','final'];
+  const labelsElim = {
+    dieciseisavos: 'Dieciseisavos', octavos: 'Octavos',
+    cuartos: 'Cuartos', semifinal: 'Semifinal',
+    tercer: '3er Lugar', final: 'Final'
+  };
+
+  const faseActivaFirestore = FASES_ELIMINATORIAS[faseActiva]?.firestore;
+
+  for (const fase of fasesElimOrden) {
+    if (fase === faseActivaFirestore) continue;
+    const partidos = elimPorFase[fase] || [];
+    const conGanador = partidos.filter(p => p.ganador).length;
+    if (conGanador === 0) continue;
+
+    const total = totalPorFase[fase] || 1;
+    const finalizada = conGanador >= total;
+    const label = labelsElim[fase] || fase;
+    const partidosHtml = generarPartidosElimLista(partidos);
+
+    html += `
+      <div class="banner-jornada-fin" id="banner-${fase}">
+        <div class="banner-jornada-header" onclick="toggleBannerJornada('${fase}')">
+          <span class="banner-jornada-titulo">${label}${finalizada ? ' — Finalizada' : ''}</span>
+          <span class="banner-jornada-sub">${conGanador}/${total} resultados</span>
+          <span class="banner-jornada-arrow" id="arrow-${fase}">▼</span>
+        </div>
+        <div class="banner-jornada-body" id="body-${fase}" style="display:none;">
+          ${partidosHtml}
+        </div>
+      </div>`;
+  }
+
   contenedor.innerHTML = html;
+}
+
+// Genera filas para eliminatorias usando array de partidos
+function generarPartidosElimLista(partidos) {
+  if (!partidos.length) return '<p style="color:var(--text-muted); padding:0.75rem; font-size:0.82rem;">Sin resultados registrados.</p>';
+
+  const sorted = [...partidos].sort((a,b) => Number(a.numero||0) - Number(b.numero||0));
+  let html = '';
+  let num  = 1;
+
+  sorted.forEach(p => {
+    const local     = p.local    || p.equipoLocal    || p.slotLocal    || '—';
+    const visitante = p.visita   || p.equipoVisita   || p.slotVisita   || '—';
+    const flagL     = BANDERAS[local]     || 'un';
+    const flagV     = BANDERAS[visitante] || 'un';
+    const tieneRes  = p.ganador;
+    const ganadorNombre = p.ganador === 'L' ? local : p.ganador === 'V' ? visitante : '';
+    const flagG     = BANDERAS[ganadorNombre] || 'un';
+
+    const resHtml = tieneRes
+      ? `<div class="estado-resultado">
+           <img src="https://flagcdn.com/16x12/${flagG}.png" class="bandera-sm">
+           <span class="estado-res-nombre">${ganadorNombre}</span>
+           <span class="estado-check">✓</span>
+         </div>`
+      : `<div class="estado-pendiente">—</div>`;
+
+    html += `
+      <div class="estado-row ${tieneRes ? 'con-resultado' : ''}">
+        <table class="estado-tabla"><tr>
+          <td class="estado-td-num">${num++}</td>
+          <td class="estado-td-local"><div class="inner">
+            <img src="https://flagcdn.com/24x18/${flagL}.png" class="bandera-sm">
+            <span class="estado-nombre">${local}</span>
+          </div></td>
+          <td class="estado-td-vs">vs</td>
+          <td class="estado-td-visit"><div class="inner">
+            <img src="https://flagcdn.com/24x18/${flagV}.png" class="bandera-sm">
+            <span class="estado-nombre">${visitante}</span>
+          </div></td>
+          <td class="estado-td-res">${resHtml}</td>
+        </tr></table>
+      </div>`;
+  });
+
+  return html;
 }
 
 function generarPartidosJornada(jornada, resMap) {
@@ -2398,7 +2561,6 @@ window.cargarJugadores = function() {
 
   if (!tbody) return;
 
-  iniciarListenerReset();
   detenerJugadoresAdminRealtime();
 
   tbody.innerHTML = `
@@ -2431,6 +2593,11 @@ window.cargarJugadores = function() {
     )
   );
 
+  // Escuchar resultados de eliminatorias (colección única)
+  unsubscribeJugadoresAdmin.push(
+    onSnapshot(collection(db, 'eliminatorias'), programarRenderJugadoresAdmin)
+  );
+
   renderJugadoresAdminRealtime();
 
 };
@@ -2446,29 +2613,37 @@ async function renderJugadoresAdminRealtime() {
     const [
       jugSnap,
       predSnap,
-      resSnap
+      resSnap,
+      elimSnap
     ] = await Promise.all([
       getDocs(collection(db, 'jugadores')),
       getDocs(collection(db, 'predicciones')),
-      getDocs(collection(db, 'resultados'))
+      getDocs(collection(db, 'resultados')),
+      getDocs(collection(db, 'eliminatorias'))
     ]);
 
-    const totalResultados = resSnap.size;
-
     // ─────────────────────────
-    // RESULTADOS
+    // RESULTADOS (jornadas + eliminatorias)
     // ─────────────────────────
     const resultadosMap = {};
 
+    // Jornadas 1-2-3: pick correcto = lev del resultado
     resSnap.docs.forEach(d => {
-
       const data = d.data();
-
-      resultadosMap[
-        (data.partidoId || '').toLowerCase()
-      ] = data.lev;
-
+      resultadosMap[(data.partidoId || '').toLowerCase()] = data.lev;
     });
+
+    // Eliminatorias: el pick es 'L' o 'V', el ganador también es 'L' o 'V'
+    elimSnap.docs.forEach(d => {
+      const data = d.data();
+      if (data.ganador) {
+        resultadosMap[d.id.toLowerCase()] = data.ganador;
+      }
+    });
+
+    // Total resultados reales
+    const totalElimConGanador = elimSnap.docs.filter(d => d.data().ganador).length;
+    const totalResultados = resSnap.size + totalElimConGanador;
 
     // ─────────────────────────
     // MAPS
@@ -2596,6 +2771,13 @@ async function renderJugadoresAdminRealtime() {
                 ? `<button class="btn-activado" onclick="desactivarJugador('${d.id}')">✓ Activo</button>`
                 : `<button class="btn-activar" onclick="activarJugador('${d.id}')">⚡ Activar</button>`
               }
+              <button
+                class="btn-reset-picks"
+                onclick="abrirModalResetPicks('${d.id}', '${escapeHtml(j.nombre).replace(/'/g, "&#39;")}')"
+                title="Resetear predicciones"
+              >
+                🔄
+              </button>
               <button
                 class="btn-eliminar"
                 onclick="eliminarJugador('${d.id}', '${escapeHtml(j.nombre).replace(/'/g, "&#39;")}')"
@@ -3015,16 +3197,6 @@ async function borrarEliminatoriaPorFase(fase) {
     total++;
   }
 
-  // Borrar predicciones de jugadores de esa eliminatoria
-  const predSnap = await getDocs(
-    query(collection(db, 'predicciones'), where('jornada', '==', fase))
-  );
-
-  for (const d of predSnap.docs) {
-    await deleteDoc(doc(db, 'predicciones', d.id));
-    total++;
-  }
-
   return total;
 }
 
@@ -3144,13 +3316,6 @@ window.resetJornada = async function(jornada) {
 
       for (const d of resSnap.docs) {
         await deleteDoc(doc(db, 'resultados', d.id));
-        totalBorrados++;
-      }
-
-      const predSnap = await getDocs(query(collection(db, 'predicciones'), where('jornada', '==', j)));
-
-      for (const d of predSnap.docs) {
-        await deleteDoc(doc(db, 'predicciones', d.id));
         totalBorrados++;
       }
     }
@@ -3707,78 +3872,102 @@ window.generarFinal = async function() {
     alert('❌ Error al generar final.');
   }
 };
+
 // ══════════════════════════════════════════════
-// SOLICITUDES DE RESET DE CONTRASEÑA
+// MODAL RESET PICKS JUGADOR
 // ══════════════════════════════════════════════
 
-let _unsubReset = null;
+let _resetPicksJugadorId   = null;
+let _resetPicksJugadorNombre = null;
+let _todosSeleccionados    = false;
 
-async function hashPasswordPanel(pass) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pass);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+window.abrirModalResetPicks = function(jugadorId, nombre) {
+  _resetPicksJugadorId     = jugadorId;
+  _resetPicksJugadorNombre = nombre;
+  _todosSeleccionados      = false;
 
-function iniciarListenerReset() {
-  if (_unsubReset) return;
+  // Limpiar checkboxes
+  document.querySelectorAll('#modal-reset-opciones input[type="checkbox"]')
+    .forEach(cb => cb.checked = false);
 
-  const q = query(
-    collection(db, 'solicitudesReset'),
-    where('estado', '==', 'pendiente')
-  );
+  document.getElementById('modal-reset-jugador-nombre').textContent = nombre;
+  document.getElementById('modal-reset-msg').style.display = 'none';
+  document.getElementById('btn-confirmar-reset-picks').disabled = false;
+  document.getElementById('btn-confirmar-reset-picks').textContent = 'Resetear selección';
 
-  _unsubReset = onSnapshot(q, snap => {
-    const card  = document.getElementById('card-reset-solicitudes');
-    const lista = document.getElementById('reset-solicitudes-lista');
-    const badge = document.getElementById('reset-badge');
+  const modal = document.getElementById('modal-reset-picks');
+  modal.style.display = 'flex';
+};
 
-    if (!card || !lista || !badge) return;
+window.cerrarModalResetPicks = function() {
+  document.getElementById('modal-reset-picks').style.display = 'none';
+  _resetPicksJugadorId     = null;
+  _resetPicksJugadorNombre = null;
+};
 
-    const docs = snap.docs;
-    badge.textContent = `${docs.length} pendiente${docs.length !== 1 ? 's' : ''}`;
-    card.style.display = docs.length > 0 ? 'block' : 'none';
+window.toggleTodosResetPicks = function() {
+  _todosSeleccionados = !_todosSeleccionados;
+  document.querySelectorAll('#modal-reset-opciones input[type="checkbox"]')
+    .forEach(cb => cb.checked = _todosSeleccionados);
+  document.querySelector('.modal-reset-btn-todos').textContent =
+    _todosSeleccionados ? 'Deseleccionar todas' : 'Seleccionar todas';
+};
 
-    if (!docs.length) {
-      lista.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Sin solicitudes pendientes.</p>';
-      return;
-    }
+window.confirmarResetPicks = async function() {
+  if (!_resetPicksJugadorId) return;
 
-    lista.innerHTML = docs.map(d => {
-      const dato = d.data();
-      return `
-        <div class="reset-solicitud-row">
-          <div class="reset-sol-info">
-            <span class="reset-sol-nombre">${dato.nombre}</span>
-            <span class="reset-sol-hint">Contraseña temporal: <strong>mundial2026</strong></span>
-          </div>
-          <button class="btn-reset-aprobar" onclick="aprobarReset('${d.id}','${dato.jugadorId}')">
-            Resetear
-          </button>
-        </div>`;
-    }).join('');
-  });
-}
+  const seleccionadas = Array.from(
+    document.querySelectorAll('#modal-reset-opciones input[type="checkbox"]:checked')
+  ).map(cb => cb.value);
 
-window.aprobarReset = async function(solicitudId, jugadorId) {
-  const btn = event.target;
+  if (!seleccionadas.length) {
+    const msg = document.getElementById('modal-reset-msg');
+    msg.style.display = 'block';
+    msg.className = 'reset-msg error';
+    msg.textContent = 'Selecciona al menos una jornada o fase.';
+    return;
+  }
+
+  const btn = document.getElementById('btn-confirmar-reset-picks');
   btn.disabled = true;
-  btn.textContent = 'Procesando...';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Borrando...';
+
+  const msg = document.getElementById('modal-reset-msg');
+  msg.style.display = 'block';
+  msg.className = 'reset-msg cargando';
+  msg.textContent = 'Borrando predicciones...';
 
   try {
-    const passHash = await hashPasswordPanel('mundial2026');
+    let total = 0;
 
-    // Actualizar contraseña del jugador
-    await setDoc(doc(db, 'jugadores', jugadorId), { password: passHash }, { merge: true });
+    for (const jornada of seleccionadas) {
+      const snap = await getDocs(
+        query(
+          collection(db, 'predicciones'),
+          where('jugadorId', '==', _resetPicksJugadorId),
+          where('jornada',   '==', jornada)
+        )
+      );
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, 'predicciones', d.id));
+        total++;
+      }
+    }
 
-    // Marcar solicitud como resuelta
-    await setDoc(doc(db, 'solicitudesReset', solicitudId), { estado: 'resuelta' }, { merge: true });
+    msg.className = 'reset-msg exito';
+    msg.textContent = `✅ Se borraron ${total} predicción${total !== 1 ? 'es' : ''} de ${_resetPicksJugadorNombre}.`;
+
+    btn.textContent = 'Listo';
+
+    setTimeout(() => {
+      cerrarModalResetPicks();
+    }, 2000);
 
   } catch(e) {
     console.error(e);
-    alert('❌ Error al resetear contraseña.');
+    msg.className = 'reset-msg error';
+    msg.textContent = '❌ Error al borrar. Intenta de nuevo.';
     btn.disabled = false;
-    btn.textContent = 'Resetear';
+    btn.textContent = 'Resetear selección';
   }
 };

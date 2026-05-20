@@ -2224,66 +2224,6 @@ table tbody tr:hover {
   }
 }
 
-/* ══ RESET SOLICITUDES ══ */
-
-.badge-reset-count {
-  background: rgba(245,197,24,0.15);
-  border: 1px solid rgba(245,197,24,0.4);
-  color: var(--gold, #f5c518);
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.reset-solicitud-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.7rem 0.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  gap: 1rem;
-}
-.reset-solicitud-row:last-child { border-bottom: none; }
-
-.reset-sol-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.reset-sol-nombre {
-  font-weight: 800;
-  color: #fff;
-  font-size: 0.9rem;
-}
-
-.reset-sol-hint {
-  font-size: 0.75rem;
-  color: #aaa;
-}
-
-.reset-sol-hint strong {
-  color: #6fe0a8;
-}
-
-.btn-reset-aprobar {
-  background: rgba(0,104,71,0.25);
-  border: 1px solid #006847;
-  color: #6fe0a8;
-  border-radius: 0.5rem;
-  padding: 0.35rem 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.18s;
-  flex-shrink: 0;
-}
-.btn-reset-aprobar:hover { background: rgba(0,104,71,0.45); }
-.btn-reset-aprobar:disabled { opacity: 0.5; cursor: not-allowed; }
-
 
 /* ══ BOTONES ACTIVAR / ACTIVO ══ */
 
@@ -2314,3 +2254,150 @@ table tbody tr:hover {
   white-space: nowrap;
 }
 .btn-activado:hover { background: rgba(255,107,122,0.15); border-color: rgba(255,107,122,0.4); color: #ff8a96; }
+
+
+/* ══ MODAL RESET PICKS ══ */
+
+.modal-reset-card {
+  background: var(--card-bg, #1a1a2e);
+  border: 1px solid rgba(245,197,24,0.25);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  margin: 1rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-reset-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal-reset-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  color: var(--gold, #f5c518);
+  letter-spacing: 1px;
+}
+
+.modal-reset-sub {
+  font-size: 0.82rem;
+  color: #aaa;
+  margin-top: 0.2rem;
+}
+
+.modal-reset-close {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.modal-reset-close:hover { color: #fff; }
+
+.modal-reset-desc {
+  font-size: 0.83rem;
+  color: #ccc;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.modal-reset-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-reset-chk {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.83rem;
+  color: #ddd;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.modal-reset-chk:hover {
+  background: rgba(245,197,24,0.08);
+  border-color: rgba(245,197,24,0.3);
+}
+
+.modal-reset-chk input[type="checkbox"] {
+  accent-color: var(--gold, #f5c518);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.modal-reset-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modal-reset-btn-todos {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #aaa;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-reset-btn-todos:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+.modal-reset-btn-cancelar {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #aaa;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modal-reset-btn-cancelar:hover { background: rgba(255,255,255,0.06); }
+
+.modal-reset-btn-confirmar {
+  background: rgba(220,50,50,0.15);
+  border: 1px solid rgba(220,50,50,0.4);
+  color: #ff8a8a;
+  border-radius: 0.5rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-reset-btn-confirmar:hover { background: rgba(220,50,50,0.28); }
+.modal-reset-btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reset-picks {
+  background: rgba(245,197,24,0.08);
+  border: 1px solid rgba(245,197,24,0.25);
+  color: var(--gold, #f5c518);
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-reset-picks:hover { background: rgba(245,197,24,0.2); }

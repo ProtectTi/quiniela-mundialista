@@ -247,17 +247,6 @@ body::before {
 }
 .btn-reset-link:hover { opacity: 1; }
 
-.reset-divider {
-  border-color: rgba(245,197,24,0.2);
-  margin: 1rem 0;
-}
-
-.reset-info {
-  font-size: 0.82rem;
-  color: #aaa;
-  margin-bottom: 1rem;
-  line-height: 1.5;
-}
 
 
 /* ══ PÁGINA RESET ══ */
