@@ -553,6 +553,9 @@ window.cargarMiQuiniela = async function() {
     const html = renderMiQuiniela(datos);
 
     contenedor.innerHTML = html;
+
+    // Iniciar contadores de banners gracias
+    setTimeout(() => iniciarContadoresBannerGracias(datos), 50);
   } catch (e) {
     console.error(e);
     contenedor.innerHTML = `<div class="text-center py-4" style="color:#ff6b7a;">Error al cargar. Intenta de nuevo.</div>`;
@@ -596,6 +599,13 @@ async function obtenerDatosQuiniela() {
     jornada1: true,
     jornada2: aparJ2.exists() && ahora >= getFechaConfig(aparJ2.data()),
     jornada3: aparJ3.exists() && ahora >= getFechaConfig(aparJ3.data()),
+  };
+
+  // Fechas de publicación de la SIGUIENTE jornada
+  const fechasPublicacion = {
+    jornada1: aparJ2.exists() ? getFechaConfig(aparJ2.data()) : null,
+    jornada2: aparJ3.exists() ? getFechaConfig(aparJ3.data()) : null,
+    jornada3: null, // Eliminatorias — sin fecha automática
   };
 
   const picksMap = crearMapaPicks(predSnap);
@@ -659,6 +669,7 @@ async function obtenerDatosQuiniela() {
     resSnaps,
     limites,
     aparicion,
+    fechasPublicacion,
     totalRes,
     totalAciertos,
     picksJ,
@@ -745,9 +756,93 @@ function renderJornadaQuiniela(jornada, idx, datos) {
     html += renderFormularioJornada(jornada, partidos, datos.picksMap, bloqueado, limite);
   }
 
-  html += `</div></div>`;
+  html += `</div>`;
+
+  // Banner de gracias — solo cuando picks guardados, NO en edición, NO finalizada
+  const fechaPublicacion = datos.fechasPublicacion?.[jornada] || null;
+  if (tienePicks && !enModoEdicion && resJornada < partidos.length && !bloqueado) {
+    html += renderBannerGracias(jornada, fechaPublicacion);
+  }
+
+  html += `</div>`;
 
   return html;
+}
+
+// ── BANNER GRACIAS + CONTADOR ──
+let _bannerGraciasIntervals = {};
+
+function renderBannerGracias(jornada, fechaPublicacion) {
+  const id   = `banner-gracias-${jornada}`;
+  const cdId = `cd-gracias-${jornada}`;
+
+  let subTexto = '';
+  let mostrarContador = false;
+
+  if (fechaPublicacion) {
+    const fechaStr = fechaPublicacion.toLocaleDateString('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long'
+    });
+    const horaStr = fechaPublicacion.toLocaleTimeString('es-MX', {
+      hour: '2-digit', minute: '2-digit'
+    });
+    subTexto = `Los siguientes partidos se publicarán el <strong>${fechaStr} a las ${horaStr}</strong>`;
+    mostrarContador = true;
+  } else {
+    subTexto = `Estamos en espera de la siguiente fase. ¡Mantente al pendiente!`;
+  }
+
+  return `
+    <div class="banner-gracias-wrap" id="${id}">
+      <div class="banner-gracias-icon">🎉</div>
+      <div class="banner-gracias-content">
+        <div class="banner-gracias-titulo">¡Gracias por registrar tu quiniela!</div>
+        <div class="banner-gracias-sub">${subTexto}</div>
+        ${mostrarContador ? `<div class="banner-gracias-contador" id="${cdId}">Calculando...</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function iniciarContadoresBannerGracias(datos) {
+  // Limpiar intervalos anteriores
+  Object.values(_bannerGraciasIntervals).forEach(clearInterval);
+  _bannerGraciasIntervals = {};
+
+  JORNADAS.forEach(jornada => {
+    const limite         = datos.limites[jornada];
+    const fechaPublicacion = datos.fechasPublicacion?.[jornada] || null;
+    const tienePicks     = datos.picksJ[jornada] > 0;
+    const modoKey        = getModoKey(jornada);
+    const enModoEdicion  = !tienePicks || window[modoKey] === true;
+    const partidos       = PARTIDOS_MUNDIAL[jornada] || [];
+    const resJornada     = datos.resSnaps[jornada]?.size || 0;
+    const bloqueado      = limite ? datos.ahora > limite : false;
+
+    if (!tienePicks || enModoEdicion || resJornada >= partidos.length || bloqueado || !fechaPublicacion) return;
+
+    const cdEl = document.getElementById(`cd-gracias-${jornada}`);
+    if (!cdEl) return;
+
+    function actualizar() {
+      const diff = fechaPublicacion.getTime() - Date.now();
+      if (diff <= 0) {
+        cdEl.textContent = '🟢 ¡Ya están publicados los siguientes partidos!';
+        clearInterval(_bannerGraciasIntervals[jornada]);
+        return;
+      }
+      const dias  = Math.floor(diff / 86400000);
+      const horas = Math.floor((diff % 86400000) / 3600000);
+      const mins  = Math.floor((diff % 3600000) / 60000);
+      const segs  = Math.floor((diff % 60000) / 1000);
+      const pad   = n => String(n).padStart(2,'0');
+      cdEl.textContent = dias > 0
+        ? `⏱ ${dias}d ${pad(horas)}h ${pad(mins)}m ${pad(segs)}s`
+        : `⏱ ${pad(horas)}h ${pad(mins)}m ${pad(segs)}s`;
+    }
+
+    actualizar();
+    _bannerGraciasIntervals[jornada] = setInterval(actualizar, 1000);
+  });
 }
 
 function renderAccionesJornada(jornada, bloqueado, tienePicks, enModoEdicion) {

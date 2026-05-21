@@ -3292,3 +3292,91 @@ table tbody tr:hover {
   .mundial-countdown-fechas { font-size: 0.68rem; }
   .mundial-cd-unit span    { font-size: 1.45rem; }
 }
+
+
+/* ══ BANNER GRACIAS + CONTADOR ══ */
+
+.banner-gracias-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, rgba(0,104,71,0.18) 0%, rgba(0,70,50,0.12) 100%);
+  border: 1px solid rgba(111,224,168,0.25);
+  border-radius: 0 0 0.85rem 0.85rem;
+  padding: 0.85rem 1.1rem;
+  margin-top: -1px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.banner-gracias-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.banner-gracias-content {
+  width: 100%;
+  min-width: 0;
+}
+
+.banner-gracias-titulo {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #6fe0a8;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.banner-gracias-sub {
+  font-size: 0.8rem;
+  color: #ccc;
+  line-height: 1.5;
+  margin-bottom: 0.4rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.banner-gracias-sub strong {
+  color: var(--gold);
+  font-weight: 800;
+}
+
+.banner-gracias-contador {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.15rem;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) and (min-width: 768px) {
+  .banner-gracias-titulo  { font-size: 0.85rem; }
+  .banner-gracias-sub     { font-size: 0.78rem; }
+  .banner-gracias-contador{ font-size: 1.05rem; }
+}
+
+@media (max-width: 767px) and (min-width: 501px) {
+  .banner-gracias-wrap    { padding: 0.75rem 1rem; }
+  .banner-gracias-titulo  { font-size: 0.83rem; }
+  .banner-gracias-sub     { font-size: 0.76rem; }
+  .banner-gracias-contador{ font-size: 1rem; letter-spacing: 1px; }
+}
+
+@media (max-width: 500px) and (min-width: 351px) {
+  .banner-gracias-wrap    { padding: 0.7rem 0.85rem; }
+  .banner-gracias-icon    { font-size: 1.2rem; }
+  .banner-gracias-titulo  { font-size: 0.8rem; }
+  .banner-gracias-sub     { font-size: 0.72rem; }
+  .banner-gracias-contador{ font-size: 0.95rem; letter-spacing: 0.8px; }
+}
+
+@media (max-width: 350px) {
+  .banner-gracias-wrap    { padding: 0.65rem 0.7rem; }
+  .banner-gracias-icon    { font-size: 1.1rem; }
+  .banner-gracias-titulo  { font-size: 0.75rem; }
+  .banner-gracias-sub     { font-size: 0.68rem; }
+  .banner-gracias-contador{ font-size: 0.88rem; letter-spacing: 0.5px; }
+}
