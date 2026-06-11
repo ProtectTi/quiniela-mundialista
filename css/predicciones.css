@@ -23,7 +23,7 @@
 body {
   font-family: 'Nunito', sans-serif;
   min-height: 100vh;
-  background: url('../img/cancha.png') center center / cover no-repeat fixed;
+  background: url('../img/cancha.webp') center center / cover no-repeat fixed;
   color: #fff;
 }
 

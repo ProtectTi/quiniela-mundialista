@@ -12,7 +12,7 @@
   <!-- Estilos propios -->
   <link rel="stylesheet" href="css/panel.css" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="img/logo.png" />
+  <link rel="apple-touch-icon" href="img/logo.webp" onerror="this.onerror=null; this.src='img/logo.png'" />
 </head>
 <body>
 
@@ -30,7 +30,7 @@
 
     <!-- Logo + Título + Badge (centro) -->
     <a class="navbar-brand-area" href="#" onclick="location.reload(); return false;" style="cursor:pointer; text-decoration:none;">
-      <img src="img/logo.png" alt="Logo" class="navbar-logo" />
+      <img src="img/logo.webp" onerror="this.onerror=null; this.src='img/logo.png'" alt="Logo" class="navbar-logo" />
       <span class="navbar-title">
         <span class="gold">Quiniela </span><span class="mexico">Mundialista</span>
       </span>
@@ -706,6 +706,39 @@
       });
     }
   </script>
+  <!-- ── MODAL EDITAR EQUIPOS ── -->
+  <div id="modal-editar-equipos" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-editar-card">
+      <div class="modal-editar-header">
+        <div>
+          <div class="modal-editar-titulo">✏️ Editar equipos</div>
+          <div class="modal-editar-sub">Modifica los equipos de este partido manualmente</div>
+        </div>
+        <button class="modal-reset-close" onclick="cerrarModalEditarEquipos()">✕</button>
+      </div>
+
+      <div class="mb-field">
+        <label class="modal-editar-label">Equipo local</label>
+        <input type="text" class="modal-editar-input" id="edit-equipo-local" placeholder="Nombre del equipo local" maxlength="50" />
+      </div>
+      <div class="mb-field">
+        <label class="modal-editar-label">Equipo visitante</label>
+        <input type="text" class="modal-editar-input" id="edit-equipo-visita" placeholder="Nombre del equipo visitante" maxlength="50" />
+      </div>
+
+      <div class="modal-editar-aviso">
+        ⚠️ Este cambio solo actualiza el nombre en el sistema. Los picks ya registrados de los jugadores no se modifican.
+      </div>
+
+      <div id="edit-equipos-msg" style="display:none; margin-top:0.5rem;"></div>
+
+      <div class="modal-editar-acciones">
+        <button class="modal-reset-btn-cancelar" onclick="cerrarModalEditarEquipos()">Cancelar</button>
+        <button class="modal-editar-btn-guardar" id="btn-guardar-editar-equipos" onclick="guardarCambiosEquipos()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── MODAL RESET PICKS JUGADOR ── -->
   <div id="modal-reset-picks" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
     <div class="modal-reset-card">

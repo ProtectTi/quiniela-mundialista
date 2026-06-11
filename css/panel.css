@@ -28,7 +28,7 @@
 body {
   font-family: 'Nunito', sans-serif;
   min-height: 100vh;
-  background: url('../img/cancha.png') center center / cover no-repeat fixed;
+  background: url('../img/cancha.webp') center center / cover no-repeat fixed;
   color: #fff;
   margin: 0;
   padding: 0;
@@ -661,6 +661,9 @@ body::before {
 
 /* ── FILAS DE PARTIDO ── */
 .partido-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: rgba(0,0,0,0.55);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 0.6rem;
@@ -675,10 +678,23 @@ body::before {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Layout móvil: dos filas */
+.partido-movil {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-editar-partido-row {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* partido-movil hidden on desktop, shown in mobile via media queries */
 .partido-movil { display: none; }
+
 
 .partido-movil-top {
   display: flex;
@@ -2401,3 +2417,118 @@ table tbody tr:hover {
   transition: background 0.15s;
 }
 .btn-reset-picks:hover { background: rgba(245,197,24,0.2); }
+
+
+/* ══ MODAL EDITAR EQUIPOS ══ */
+
+.modal-editar-card {
+  background: var(--card-bg, #1a1a2e);
+  border: 1px solid rgba(245,197,24,0.25);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  width: 100%;
+  max-width: 440px;
+  margin: 1rem;
+}
+
+.modal-editar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-editar-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  color: var(--gold, #f5c518);
+  letter-spacing: 1px;
+}
+
+.modal-editar-sub {
+  font-size: 0.78rem;
+  color: #aaa;
+  margin-top: 0.15rem;
+}
+
+.modal-editar-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.modal-editar-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  color: #fff;
+  font-size: 0.88rem;
+  font-family: 'Nunito', sans-serif;
+  transition: border-color 0.18s;
+  box-sizing: border-box;
+}
+.modal-editar-input:focus {
+  outline: none;
+  border-color: rgba(245,197,24,0.5);
+}
+
+.modal-editar-aviso {
+  background: rgba(245,197,24,0.07);
+  border: 1px solid rgba(245,197,24,0.2);
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.76rem;
+  color: #ccc;
+  line-height: 1.5;
+  margin: 0.75rem 0;
+}
+
+.modal-editar-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.modal-editar-btn-guardar {
+  background: rgba(245,197,24,0.15);
+  border: 1px solid rgba(245,197,24,0.5);
+  color: var(--gold, #f5c518);
+  border-radius: 0.5rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-editar-btn-guardar:hover { background: rgba(245,197,24,0.28); }
+.modal-editar-btn-guardar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-editar-equipos {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-editar-equipos:hover { background: rgba(245,197,24,0.15); border-color: rgba(245,197,24,0.35); }
+
+
+/* ══ COLUMNA EDITAR PARTIDO ══ */
+.partido-col-editar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-left: 0.5rem;
+}

@@ -50,6 +50,14 @@ onAuthStateChanged(auth, (user) => {
 // ── ESTADO GLOBAL ──
 let faseActiva = 'jornada1';
 
+// Normaliza un valor de fase (puede ser key '16avos' o firestore 'dieciseisavos') al key correcto
+function normalizarFaseKey(fase) {
+  if (FASES_ELIMINATORIAS[fase]) return fase; // ya es el key
+  // Buscar por firestore value
+  const entry = Object.entries(FASES_ELIMINATORIAS).find(([k, v]) => v.firestore === fase);
+  return entry ? entry[0] : fase;
+}
+
 const FASES_ELIMINATORIAS = {
   '16avos': {
     firestore: 'dieciseisavos',
@@ -84,6 +92,60 @@ const FASES_ELIMINATORIAS = {
     label: 'Final'
   }
 };
+
+// ══════════════════════════════
+// PARTIDOS OVERRIDE
+// ══════════════════════════════
+
+// Carga los overrides de Firestore y los aplica en PARTIDOS_MUNDIAL
+async function cargarYAplicarOverrides() {
+  try {
+    const snap = await getDocs(collection(db, 'partidosOverride'));
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const partidoId = data.partidoId;
+      if (!partidoId) return;
+
+      // Buscar en todas las jornadas
+      for (const jornada of ['jornada1', 'jornada2', 'jornada3']) {
+        const partidos = PARTIDOS_MUNDIAL[jornada] || [];
+        const idx = partidos.findIndex(p => p.id === partidoId);
+        if (idx !== -1) {
+          if (data.local)     PARTIDOS_MUNDIAL[jornada][idx].local     = data.local;
+          if (data.visitante) PARTIDOS_MUNDIAL[jornada][idx].visitante = data.visitante;
+          break;
+        }
+      }
+    });
+  } catch(e) {
+    console.error('Error cargando overrides:', e);
+  }
+}
+
+// Listener en tiempo real para overrides
+function iniciarOverridesListener() {
+  onSnapshot(collection(db, 'partidosOverride'), (snap) => {
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const partidoId = data.partidoId;
+      if (!partidoId) return;
+
+      for (const jornada of ['jornada1', 'jornada2', 'jornada3']) {
+        const partidos = PARTIDOS_MUNDIAL[jornada] || [];
+        const idx = partidos.findIndex(p => p.id === partidoId);
+        if (idx !== -1) {
+          if (data.local)     PARTIDOS_MUNDIAL[jornada][idx].local     = data.local;
+          if (data.visitante) PARTIDOS_MUNDIAL[jornada][idx].visitante = data.visitante;
+          break;
+        }
+      }
+    });
+    // Refrescar sección activa si es partidos
+    if (document.getElementById('sec-partidos')?.classList.contains('active')) {
+      cargarFase(faseActiva);
+    }
+  });
+}
 
 // ══════════════════════════════
 // NAVBAR
@@ -325,11 +387,15 @@ function renderEstadoPartidos(resMap) {
 
 // ── Render partidos de fase eliminatoria activa ──
 async function renderEstadoPartidosElim(fase) {
+  fase = normalizarFaseKey(fase);
   const contenedor = document.getElementById('estado-partidos');
   if (!contenedor) return;
 
   const cfg = FASES_ELIMINATORIAS[fase];
-  if (!cfg) return;
+  if (!cfg) {
+    console.warn('renderEstadoPartidosElim: fase no reconocida:', fase);
+    return;
+  }
 
   try {
     // Todo está en la colección 'eliminatorias' con campo fase = cfg.firestore
@@ -650,7 +716,7 @@ window.togglePublicar = async function() {
     actualizarUIQuinielasPublicadas(nuevoEstado, true);
   } catch (e) {
     console.error('Error publicando quinielas:', e);
-    alert('Error al cambiar el estado de las quinielas.');
+    showToast('Error al cambiar el estado de las quinielas.', 'error');
   } finally {
     btn.disabled = false;
   }
@@ -797,6 +863,9 @@ window.cargarFase = async function(fase) {
           </div>
         </div>
 
+        <!-- Botón editar — visible siempre, fuera de desktop/movil -->
+        <button class="btn-editar-equipos btn-editar-partido-row" data-id="${p.id}" data-local="${p.local}" data-visita="${p.visitante}" data-tipo="jornada" onclick="abrirModalEditarEquiposDesdBtn(this)" title="Editar equipos">✏️</button>
+
       </div>`;
   });
 
@@ -804,7 +873,10 @@ window.cargarFase = async function(fase) {
 };
 
 async function cargarEliminatoria(fase) {
+  fase = normalizarFaseKey(fase);
   const config = FASES_ELIMINATORIAS[fase];
+  if (!config) return;
+
   const contenedor = document.getElementById('lista-partidos');
 
   const acciones = document.querySelector('.partidos-acciones');
@@ -945,9 +1017,12 @@ function renderEliminatoriaCard(p) {
           </button>
         </div>
 
-        <button class="btn-guardar-elim" onclick="guardarResultadoEliminatoria('${p.idDoc}')">
-          Guardar resultado
-        </button>
+        <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+          <button class="btn-guardar-elim" style="flex:1;" onclick="guardarResultadoEliminatoria('${p.idDoc}')">
+            Guardar resultado
+          </button>
+          <button class="btn-editar-equipos" data-id="${p.idDoc}" data-local="${p.local||''}" data-visita="${p.visita||''}" data-tipo="eliminatoria" onclick="abrirModalEditarEquiposDesdBtn(this)" title="Editar equipos">✏️</button>
+        </div>
 
         <div class="dieciseisavos-info">
           ${p.fecha}
@@ -997,7 +1072,7 @@ window.guardarResultadoEliminatoria = async function(idDoc) {
       actualizadoEn: new Date()
     }, { merge: true });
 
-    alert('✅ Resultado guardado correctamente.');
+    showToast('✅ Resultado guardado correctamente.', 'success');
 
     if (FASES_ELIMINATORIAS[faseActiva]) {
       await cargarEliminatoria(faseActiva);
@@ -1005,7 +1080,7 @@ window.guardarResultadoEliminatoria = async function(idDoc) {
 
   } catch(e) {
     console.error(e);
-    alert('❌ Error al guardar resultado.');
+    showToast('❌ Error al guardar resultado.', 'error');
   }
 };
 
@@ -1103,7 +1178,7 @@ window.guardarTodoEliminatoria = async function() {
       btn.disabled = false;
     }
 
-    alert('❌ Error al guardar eliminatorias.');
+    showToast('❌ Error al guardar eliminatorias.', 'error');
   }
 };
 
@@ -2818,16 +2893,19 @@ window.activarJugador = async function(id) {
     await setDoc(doc(db, 'jugadores', id), { activado: true }, { merge: true });
   } catch(e) {
     console.error(e);
-    alert('Error al activar jugador.');
+    showToast('Error al activar jugador.', 'error');
   }
 };
 
 window.desactivarJugador = async function(id) {
+  const ok = confirm('¿Desactivar esta cuenta? El jugador perderá acceso hasta que vuelvas a activarla.');
+  if (!ok) return;
   try {
     await setDoc(doc(db, 'jugadores', id), { activado: false }, { merge: true });
+    showToast('Cuenta desactivada.', 'info');
   } catch(e) {
     console.error(e);
-    alert('Error al desactivar jugador.');
+    showToast('Error al desactivar jugador.', 'error');
   }
 };
 
@@ -2839,7 +2917,7 @@ window.eliminarJugador = async function(id, nombre) {
     cargarJugadores();
   } catch(e) {
     console.error(e);
-    alert('Error al eliminar. Intenta de nuevo.');
+    showToast('Error al eliminar. Intenta de nuevo.', 'error');
   }
 };
 
@@ -3350,6 +3428,8 @@ window.resetJornada = async function(jornada) {
 };
 
 window.addEventListener('load', async () => {
+  await cargarYAplicarOverrides();
+  iniciarOverridesListener();
   iniciarEliminatoriasListenerAdmin();
 
   await cargarFase('jornada1');
@@ -3971,3 +4051,98 @@ window.confirmarResetPicks = async function() {
     btn.textContent = 'Resetear selección';
   }
 };
+
+// ══════════════════════════════════════════════
+// EDITAR EQUIPOS DE PARTIDO
+// ══════════════════════════════════════════════
+
+let _editarPartidoId   = null;
+let _editarTipo        = null; // 'jornada' | 'eliminatoria'
+
+// Helper para botones con data attributes
+window.abrirModalEditarEquiposDesdBtn = function(btn) {
+  const id     = btn.dataset.id;
+  const local  = btn.dataset.local  || '';
+  const visita = btn.dataset.visita || '';
+  const tipo   = btn.dataset.tipo   || 'jornada';
+  window.abrirModalEditarEquipos(id, local, visita, tipo);
+};
+
+window.abrirModalEditarEquipos = function(partidoId, local, visita, tipo) {
+  _editarPartidoId = partidoId;
+  _editarTipo      = tipo;
+
+  document.getElementById('edit-equipo-local').value   = local   || '';
+  document.getElementById('edit-equipo-visita').value  = visita  || '';
+  document.getElementById('edit-equipos-msg').style.display = 'none';
+  document.getElementById('btn-guardar-editar-equipos').disabled = false;
+  document.getElementById('btn-guardar-editar-equipos').textContent = 'Guardar cambios';
+
+  const modal = document.getElementById('modal-editar-equipos');
+  modal.style.display = 'flex';
+};
+
+window.cerrarModalEditarEquipos = function() {
+  document.getElementById('modal-editar-equipos').style.display = 'none';
+  _editarPartidoId = null;
+  _editarTipo      = null;
+};
+
+window.guardarCambiosEquipos = async function() {
+  if (!_editarPartidoId) return;
+
+  const nuevoLocal  = document.getElementById('edit-equipo-local').value.trim();
+  const nuevoVisita = document.getElementById('edit-equipo-visita').value.trim();
+
+  if (!nuevoLocal || !nuevoVisita) {
+    mostrarMsgEditar('Ambos equipos son requeridos.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-guardar-editar-equipos');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+  try {
+    if (_editarTipo === 'jornada') {
+      // Guardar override en Firestore colección 'partidosOverride'
+      await setDoc(doc(db, 'partidosOverride', _editarPartidoId), {
+        local:      nuevoLocal,
+        visitante:  nuevoVisita,
+        partidoId:  _editarPartidoId,
+        editadoEn:  new Date()
+      }, { merge: true });
+    } else {
+      // Actualizar directamente en 'eliminatorias'
+      await setDoc(doc(db, 'eliminatorias', _editarPartidoId), {
+        local:  nuevoLocal,
+        visita: nuevoVisita,
+      }, { merge: true });
+    }
+
+    mostrarMsgEditar('✅ Equipos actualizados correctamente.', 'exito');
+    btn.textContent = 'Guardado';
+
+    setTimeout(() => {
+      cerrarModalEditarEquipos();
+      if (_editarTipo === 'jornada') {
+        cargarFase(faseActiva);
+      } else if (FASES_ELIMINATORIAS[normalizarFaseKey(faseActiva)]) {
+        cargarEliminatoria(normalizarFaseKey(faseActiva));
+      }
+    }, 1200);
+
+  } catch(e) {
+    console.error(e);
+    mostrarMsgEditar('❌ Error al guardar. Intenta de nuevo.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Guardar cambios';
+  }
+};
+
+function mostrarMsgEditar(texto, tipo) {
+  const el = document.getElementById('edit-equipos-msg');
+  el.style.display = 'block';
+  el.className = `reset-msg ${tipo}`;
+  el.textContent = texto;
+}

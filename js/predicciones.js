@@ -145,11 +145,56 @@ function ocultarPantallaPago() {
   });
 }
 
+// ── OVERRIDE PARTIDOS ──
+async function cargarYAplicarOverrides() {
+  try {
+    const snap = await getDocs(collection(db, 'partidosOverride'));
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const partidoId = data.partidoId;
+      if (!partidoId) return;
+      for (const jornada of ['jornada1', 'jornada2', 'jornada3']) {
+        const partidos = PARTIDOS_MUNDIAL[jornada] || [];
+        const idx = partidos.findIndex(p => p.id === partidoId);
+        if (idx !== -1) {
+          if (data.local)     PARTIDOS_MUNDIAL[jornada][idx].local     = data.local;
+          if (data.visitante) PARTIDOS_MUNDIAL[jornada][idx].visitante = data.visitante;
+          break;
+        }
+      }
+    });
+
+    // Listener en tiempo real
+    onSnapshot(collection(db, 'partidosOverride'), (snap) => {
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const partidoId = data.partidoId;
+        if (!partidoId) return;
+        for (const jornada of ['jornada1', 'jornada2', 'jornada3']) {
+          const partidos = PARTIDOS_MUNDIAL[jornada] || [];
+          const idx = partidos.findIndex(p => p.id === partidoId);
+          if (idx !== -1) {
+            if (data.local)     PARTIDOS_MUNDIAL[jornada][idx].local     = data.local;
+            if (data.visitante) PARTIDOS_MUNDIAL[jornada][idx].visitante = data.visitante;
+            break;
+          }
+        }
+      });
+      // Refrescar si está en mi quiniela o inicio
+      if (seccionActiva === 'miquiniela') cargarMiQuiniela();
+      if (seccionActiva === 'inicio') cargarInicio();
+    });
+  } catch(e) {
+    console.error('Error cargando overrides:', e);
+  }
+}
+
 // ── INIT ──
 window.addEventListener('load', async () => {
   document.getElementById('navbar-username').textContent = jugador.nombre;
   document.getElementById('menu-username').textContent   = jugador.nombre;
 
+  await cargarYAplicarOverrides();
   iniciarListenerActivacion();
 
   await cargarInicio();
