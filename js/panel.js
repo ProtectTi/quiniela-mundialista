@@ -2538,7 +2538,7 @@ async function renderPosicionesAdminRealtime() {
 
     jugadores.forEach((j, index) => {
       if (j.aciertos !== aciertosAnterior) {
-        posicionActual = index + 1;
+        posicionActual++;
         aciertosAnterior = j.aciertos;
       }
 

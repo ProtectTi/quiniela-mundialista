@@ -45,6 +45,7 @@
       <button class="nav-tab-btn"        id="tab-quinielas"   onclick="cambiarSeccion('quinielas')">Quinielas</button>
       <button class="nav-tab-btn"        id="tab-posiciones"  onclick="cambiarSeccion('posiciones')">Posiciones</button>
       <button class="nav-tab-btn"        id="tab-grupos"      onclick="cambiarSeccion('grupos')">Grupos</button>
+      <button class="nav-tab-btn"        id="tab-bracket"     onclick="cambiarSeccion('bracket')">Eliminatorias</button>
     </div>
 
     <!-- Usuario + Salir (desktop) -->
@@ -63,6 +64,7 @@
     <button class="nav-tab-btn"        id="tab-m-quinielas"  onclick="cambiarSeccion('quinielas', true)">👥 Quinielas</button>
     <button class="nav-tab-btn"        id="tab-m-posiciones" onclick="cambiarSeccion('posiciones', true)">🏆 Posiciones</button>
     <button class="nav-tab-btn"        id="tab-m-grupos"     onclick="cambiarSeccion('grupos', true)">🌍 Grupos</button>
+    <button class="nav-tab-btn"        id="tab-m-bracket"    onclick="cambiarSeccion('bracket', true)">🏆 Eliminatorias</button>
     <button class="nav-tab-btn" style="margin-top:auto; color:#ff6b7a;" onclick="cerrarSesion()">🚪 Salir</button>
   </div>
   <div class="menu-overlay" id="menu-overlay" onclick="cerrarMenu()"></div>
@@ -254,6 +256,17 @@
           <div class="text-center py-5" style="color:var(--text-muted);">
             Cargando grupos...
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BRACKET ELIMINATORIAS -->
+    <section class="seccion" id="sec-bracket">
+      <div class="container-fluid">
+        <h2 class="bienvenido-title">Eliminatorias</h2>
+        <p class="bienvenido-sub">Bracket de la fase eliminatoria del Mundial 2026</p>
+        <div id="bracket-contenido">
+          <div class="text-center py-5" style="color:var(--text-muted);">Cargando...</div>
         </div>
       </div>
     </section>

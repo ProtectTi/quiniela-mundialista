@@ -557,6 +557,11 @@ window.cambiarSeccion = function(nombre, desdeMobil = false) {
   if (nombre === 'grupos') {
   cargarGrupos();
   }
+
+  if (nombre === 'bracket') {
+    iniciarBracketRealtime();
+    renderBracket();
+  }
 };
 
 // ══════════════════════════════
@@ -803,9 +808,13 @@ function renderJornadaQuiniela(jornada, idx, datos) {
 
   html += `</div>`;
 
-  // Banner de gracias — solo cuando picks guardados, NO en edición, NO finalizada
+  // Banner de gracias — cuando picks guardados, NO en edición, y:
+  //   a) la jornada aún no finalizó, O
+  //   b) la jornada ya finalizó pero la siguiente aún no se ha publicado (hay fecha de publicación futura)
   const fechaPublicacion = datos.fechasPublicacion?.[jornada] || null;
-  if (tienePicks && !enModoEdicion && resJornada < partidos.length && !bloqueado) {
+  const jornadaFinalizada = resJornada >= partidos.length;
+  const siguienteAunNoPub = fechaPublicacion && Date.now() < fechaPublicacion.getTime();
+  if (tienePicks && !enModoEdicion && (!jornadaFinalizada || siguienteAunNoPub)) {
     html += renderBannerGracias(jornada, fechaPublicacion);
   }
 
@@ -863,7 +872,10 @@ function iniciarContadoresBannerGracias(datos) {
     const resJornada     = datos.resSnaps[jornada]?.size || 0;
     const bloqueado      = limite ? datos.ahora > limite : false;
 
-    if (!tienePicks || enModoEdicion || resJornada >= partidos.length || bloqueado || !fechaPublicacion) return;
+    const jornadaFinalizada = resJornada >= partidos.length;
+    const siguienteAunNoPub = fechaPublicacion && Date.now() < fechaPublicacion.getTime();
+    if (!tienePicks || enModoEdicion || !fechaPublicacion) return;
+    if (jornadaFinalizada && !siguienteAunNoPub) return;
 
     const cdEl = document.getElementById(`cd-gracias-${jornada}`);
     if (!cdEl) return;
@@ -1866,7 +1878,7 @@ function renderTablaPosiciones(jugadores, totalResultados) {
 
   jugadores.forEach((j, index) => {
     if (j.aciertos !== aciertosAnterior) {
-      posicionActual = index + 1;
+      posicionActual++;
       aciertosAnterior = j.aciertos;
     }
 
@@ -2874,7 +2886,7 @@ function renderPartidoEliminatoriaJugador(p, fase, pickGuardado = null, cerrado 
 
         <div class="partido-pick-visit">
           <img src="https://flagcdn.com/24x18/${flagVisita}.png" class="bandera-sm">
-          <span>${p.visita || 'Por definir'}</span>
+          <span>${p.visita || p.visitante || 'Por definir'}</span>
         </div>
       </div>
 
@@ -3157,3 +3169,141 @@ window.activarModoEdicionEliminatoria = function(fase) {
     setInterval(actualizar, 1000);
   }
 })();
+
+// ══════════════════════════════════════════════
+// BRACKET DE ELIMINATORIAS (solo visualización)
+// ══════════════════════════════════════════════
+
+let _bracketUnsubscribe = null;
+
+function iniciarBracketRealtime() {
+  if (_bracketUnsubscribe) return;
+  _bracketUnsubscribe = onSnapshot(collection(db, 'eliminatorias'), () => {
+    if (seccionActiva === 'bracket') renderBracket();
+  });
+}
+
+async function renderBracket() {
+  const contenedor = document.getElementById('bracket-contenido');
+  if (!contenedor) return;
+
+  try {
+    const [elimSnap, cfgSnap] = await Promise.all([
+      getDocs(collection(db, 'eliminatorias')),
+      getDocs(collection(db, 'config'))
+    ]);
+
+    const todos = elimSnap.docs.map(d => ({ idDoc: d.id, ...d.data() }));
+    const configMap = {};
+    cfgSnap.docs.forEach(d => { configMap[d.id] = d.data(); });
+
+    // Mapa por número
+    const pm = {};
+    todos.forEach(p => { pm[Number(p.numero)] = p; });
+
+    // Siempre mostrar el bracket completo con placeholders
+
+    // Helper
+    const bSlot = (n, etiqueta) => {
+      const p = pm[n];
+      const nombre = p ? (p.local || etiqueta) : etiqueta;
+      const flag = p ? getFlag(p.local || '') : '';
+      const esGanador = false;
+      return { nombre, flag, p };
+    };
+
+    const equipo = (p, lado) => {
+      if (!p) return { nombre: '?', flag: '', ganador: false, perdedor: false };
+      const nombre = lado === 'L' ? (p.local || '?') : (p.visita || p.visitante || '?');
+      const flag = getFlag(nombre);
+      const ganador = p.ganador === lado;
+      const perdedor = p.ganador && p.ganador !== lado;
+      return { nombre, flag, ganador, perdedor };
+    };
+
+    const htmlEquipo = (eq, mini) => {
+      const cls = eq.ganador ? 'bk-ganador' : eq.perdedor ? 'bk-perdedor' : '';
+      const size = mini ? '16x12' : '20x15';
+      return `<div class="bk-equipo ${cls}">
+        <img src="https://flagcdn.com/${size}/${eq.flag}.png" class="bk-flag">
+        <span class="bk-nombre">${eq.nombre}</span>
+        ${eq.ganador ? '<span class="bk-check">✓</span>' : ''}
+      </div>`;
+    };
+
+    const htmlPartido = (n, fallback, mini) => {
+      const p = pm[n];
+      // Sin partido generado aún
+      if (!p) return `<div class="bk-partido bk-vacio"><span class="bk-slot">${fallback}</span></div>`;
+      const L = equipo(p, 'L');
+      const V = equipo(p, 'V');
+      const def = p.ganador ? 'bk-definido' : '';
+      const sinEquipos = !p.local && !(p.visita || p.visitante);
+      // Partido generado pero sin equipos aún — mostrar slot
+      if (sinEquipos) return `<div class="bk-partido bk-vacio"><span class="bk-slot">${fallback}</span></div>`;
+      return `<div class="bk-partido ${def}">
+        <span class="bk-partido-num">P${n}${p.fecha ? ' · '+p.fecha : ''}</span>
+        ${htmlEquipo(L, mini)}
+        <div class="bk-vs">VS</div>
+        ${htmlEquipo(V, mini)}
+      </div>`;
+    };
+
+    // ── ESTRUCTURA SIMÉTRICA ──
+    // Izquierda: 16avos 73-80, octavos 89-92, cuartos 97+99, semi 101
+    // Derecha:   16avos 81-88, octavos 93-96, cuartos 98+100, semi 102
+    // Centro:    Final 104 + 3er lugar 103
+
+    const tieneT = todos.some(p => p.fase === 'tercer');
+
+    // Siempre mostrar todas las columnas del bracket
+    const cols = [
+      'dieciseisavos-izq','octavos-izq','cuartos-izq','semi-izq',
+      'final',
+      'semi-der','cuartos-der','octavos-der','dieciseisavos-der'
+    ];
+
+    const colHeaders = {
+      'dieciseisavos-izq': 'Dieciseisavos',
+      'octavos-izq': 'Octavos',
+      'cuartos-izq': 'Cuartos',
+      'semi-izq': 'Semifinal',
+      'final': 'Final',
+      'semi-der': 'Semifinal',
+      'cuartos-der': 'Cuartos',
+      'octavos-der': 'Octavos',
+      'dieciseisavos-der': 'Dieciseisavos',
+    };
+
+    const colContent = {
+      'dieciseisavos-izq': [htmlPartido(74,'P74',true), htmlPartido(77,'P77',true), htmlPartido(73,'P73',true), htmlPartido(75,'P75',true), htmlPartido(83,'P83',true), htmlPartido(84,'P84',true), htmlPartido(81,'P81',true), htmlPartido(82,'P82',true)],
+      'octavos-izq':       [htmlPartido(89,'P89',true), htmlPartido(90,'P90',true), htmlPartido(93,'P93',true), htmlPartido(94,'P94',true)],
+      'cuartos-izq':       [htmlPartido(97,'P97',false), htmlPartido(98,'P98',false)],
+      'semi-izq':          [htmlPartido(101,'P101',false)],
+      'final':             [htmlPartido(104,'Final',false), tieneT ? htmlPartido(103,'3er Lugar',false) : ''],
+      'semi-der':          [htmlPartido(102,'P102',false)],
+      'cuartos-der':       [htmlPartido(99,'P99',false), htmlPartido(100,'P100',false)],
+      'octavos-der':       [htmlPartido(91,'P91',true), htmlPartido(92,'P92',true), htmlPartido(95,'P95',true), htmlPartido(96,'P96',true)],
+      'dieciseisavos-der': [htmlPartido(76,'P76',true), htmlPartido(78,'P78',true), htmlPartido(79,'P79',true), htmlPartido(80,'P80',true), htmlPartido(86,'P86',true), htmlPartido(88,'P88',true), htmlPartido(85,'P85',true), htmlPartido(87,'P87',true)],
+    };
+
+    let html = `<div class="bk-scroll"><div class="bk-bracket">`;
+
+    cols.forEach(col => {
+      const isFinal = col === 'final';
+      html += `<div class="bk-col ${isFinal ? 'bk-col-final' : ''}">
+        <div class="bk-col-header">${colHeaders[col]}</div>
+        <div class="bk-col-partidos">
+          ${colContent[col].join('')}
+        </div>
+      </div>`;
+    });
+
+    html += `</div></div>`;
+    contenedor.innerHTML = html;
+
+  } catch(e) {
+    console.error('Error bracket:', e);
+    contenedor.innerHTML = `<div class="text-center py-4" style="color:#ff6b7a;">Error al cargar el bracket.</div>`;
+  }
+}
