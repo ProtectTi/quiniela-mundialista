@@ -1803,11 +1803,11 @@ function renderPartidoDieciseisavos(p) {
         </div>
 
         <div class="dieciseisavos-teams">
-          ${renderSlotDieciseisavos(p.local, p.equipoLocal)}
+          ${renderSlotDieciseisavos(p.local, p.equipoLocal, p.id, 'local')}
 
           <div class="dieciseisavos-vs">VS</div>
 
-          ${renderSlotDieciseisavos(p.visita, p.equipoVisita)}
+          ${renderSlotDieciseisavos(p.visita, p.equipoVisita, p.id, 'visita')}
         </div>
 
         <div class="dieciseisavos-info">
@@ -1820,7 +1820,11 @@ function renderPartidoDieciseisavos(p) {
   `;
 }
 
-function renderSlotDieciseisavos(slot, equipo) {
+function renderSlotDieciseisavos(slot, equipo, partidoId, lado) {
+  const btnGenerar = partidoId
+    ? `<button class="btn-slot-confirmar" onclick="window.confirmarSlotDieciseisavos(${partidoId}, '${lado}', '${slot}', this)">⚡ Confirmar</button>`
+    : '';
+
   if (!equipo) {
     return `
       <div class="dieciseisavos-team pendiente">
@@ -1830,6 +1834,7 @@ function renderSlotDieciseisavos(slot, equipo) {
           <strong>Por definir</strong>
         </div>
         <small>Sin clasificado todavía</small>
+        ${btnGenerar}
       </div>
     `;
   }
@@ -1843,6 +1848,7 @@ function renderSlotDieciseisavos(slot, equipo) {
           <strong>${equipo.equipo}</strong>
         </div>
         <small>Asignación pendiente</small>
+        ${btnGenerar}
       </div>
     `;
   }
@@ -1857,6 +1863,7 @@ function renderSlotDieciseisavos(slot, equipo) {
         <img src="https://flagcdn.com/24x18/${flag}.png" class="bandera-sm">
         <strong>${equipo.equipo}</strong>
       </div>
+      ${btnGenerar}
 
       <small>${equipo.posicion}° Grupo ${equipo.grupo}</small>
     </div>
@@ -3439,6 +3446,60 @@ window.addEventListener('load', async () => {
 // ══════════════════════════════
 // GENERAR DIECISEISAVOS
 // ══════════════════════════════
+window.confirmarSlotDieciseisavos = async function(partidoId, lado, slot, btnEl) {
+  const equipo = prompt(`¿Qué equipo va en el slot ${slot} (Partido ${partidoId})?\nEscribe el nombre exacto del equipo:`);
+  if (!equipo || !equipo.trim()) return;
+
+  const confirmado = confirm(`¿Confirmas que "${equipo.trim()}" ya clasificó a dieciseisavos en el slot ${slot}?`);
+  if (!confirmado) return;
+
+  try {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Guardando...';
+
+    const ref = doc(db, 'eliminatorias', `dieciseisavos-${partidoId}`);
+    const snap = await getDoc(ref);
+
+    const campo = lado === 'local' ? 'local' : 'visita';
+    const slotCampo = lado === 'local' ? 'slotLocal' : 'slotVisita';
+
+    const partidosBase = getDieciseisavosOficiales();
+    const base = partidosBase.find(p => p.id === partidoId);
+
+    if (snap.exists()) {
+      // Partido ya existe, solo actualizar el equipo
+      await updateDoc(ref, { [campo]: equipo.trim() });
+    } else {
+      // Crear el partido con los datos base y el equipo confirmado
+      await setDoc(ref, {
+        fase: 'dieciseisavos',
+        numero: partidoId,
+        local: lado === 'local' ? equipo.trim() : null,
+        visita: lado === 'visita' ? equipo.trim() : null,
+        slotLocal: base?.local || slot,
+        slotVisita: base?.visita || slot,
+        fecha: base?.fecha || null,
+        hora: base?.hora || null,
+        estadio: base?.estadio || null,
+        ciudad: base?.ciudad || null,
+        marcadorLocal: null,
+        marcadorVisita: null,
+        ganador: null,
+        creadoEn: serverTimestamp()
+      });
+    }
+
+    alert(`✅ "${equipo.trim()}" confirmado en el partido ${partidoId}.`);
+    cargarGrupos(); // refrescar la vista
+
+  } catch(e) {
+    console.error(e);
+    alert('❌ Error al confirmar el equipo.');
+    btnEl.disabled = false;
+    btnEl.textContent = '⚡ Confirmar';
+  }
+};
+
 window.generarDieciseisavos = async function() {
 
   const confirmado = confirm(
