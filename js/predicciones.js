@@ -623,7 +623,8 @@ async function obtenerDatosQuiniela() {
     resJ3,
     elimSnap,
     aparJ2,
-    aparJ3
+    aparJ3,
+    aparDieciseis
   ] = await Promise.all([
     getDoc(doc(db, 'config', 'fechaLimite_jornada1')),
     getDoc(doc(db, 'config', 'fechaLimite_jornada2')),
@@ -635,6 +636,7 @@ async function obtenerDatosQuiniela() {
     getDocs(collection(db, 'eliminatorias')),
     getDoc(doc(db, 'config', 'aparicion_jornada2')),
     getDoc(doc(db, 'config', 'aparicion_jornada3')),
+    getDoc(doc(db, 'config', 'aparicion_dieciseisavos')),
   ]);
 
   const ahora = new Date();
@@ -655,7 +657,7 @@ async function obtenerDatosQuiniela() {
   const fechasPublicacion = {
     jornada1: aparJ2.exists() ? getFechaConfig(aparJ2.data()) : null,
     jornada2: aparJ3.exists() ? getFechaConfig(aparJ3.data()) : null,
-    jornada3: null, // Eliminatorias — sin fecha automática
+    jornada3: aparDieciseis.exists() ? getFechaConfig(aparDieciseis.data()) : null,
   };
 
   const picksMap = crearMapaPicks(predSnap);
@@ -2866,8 +2868,20 @@ function renderAccionesEliminatoria(fase, cerrado, tienePicks, enModoEdicion) {
 }
 
 function renderPartidoEliminatoriaJugador(p, fase, pickGuardado = null, cerrado = false) {
-  const flagLocal = getFlag(p.local);
-  const flagVisita = getFlag(p.visita);
+  const nombreLocal  = p.local || null;
+  const nombreVisita = p.visita || p.visitante || null;
+  const flagLocal    = nombreLocal  ? getFlag(nombreLocal)  : null;
+  const flagVisita   = nombreVisita ? getFlag(nombreVisita) : null;
+
+  // Ícono neutral SVG para equipos sin definir
+  const iconoSlot = `<span class="slot-icon-neutral">🛡️</span>`;
+  const imgLocal  = flagLocal  ? `<img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">` : iconoSlot;
+  const imgVisita = flagVisita ? `<img src="https://flagcdn.com/24x18/${flagVisita}.png" class="bandera-sm">` : iconoSlot;
+  const imgLocalBtn  = flagLocal  ? `<img src="https://flagcdn.com/16x12/${flagLocal}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">` : `<span class="slot-icon-btn">🛡️</span>`;
+  const imgVisitaBtn = flagVisita ? `<img src="https://flagcdn.com/16x12/${flagVisita}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">` : `<span class="slot-icon-btn">🛡️</span>`;
+
+  const slotLocal  = p.slotLocal  || 'Por definir';
+  const slotVisita = p.slotVisita || 'Por definir';
 
   return `
     <div class="partido-pick elim-pick-card" data-partido-id="${p.idDoc}" data-fase="${fase}">
@@ -2878,34 +2892,34 @@ function renderPartidoEliminatoriaJugador(p, fase, pickGuardado = null, cerrado 
 
       <div class="partido-pick-equipos">
         <div class="partido-pick-local">
-          <span>${p.local || 'Por definir'}</span>
-          <img src="https://flagcdn.com/24x18/${flagLocal}.png" class="bandera-sm">
+          <span>${nombreLocal || slotLocal}</span>
+          ${imgLocal}
         </div>
 
         <span class="partido-pick-vs">VS</span>
 
         <div class="partido-pick-visit">
-          <img src="https://flagcdn.com/24x18/${flagVisita}.png" class="bandera-sm">
-          <span>${p.visita || p.visitante || 'Por definir'}</span>
+          ${imgVisita}
+          <span>${nombreVisita || slotVisita}</span>
         </div>
       </div>
 
       <div class="pick-btns elim-pick-options">
         <button
           class="btn-pick local ${pickGuardado === 'L' ? 'seleccionado local activo' : ''}"
-          ${cerrado ? 'disabled' : ''}
+          ${(cerrado || !nombreLocal) ? 'disabled' : ''}
           onclick="pickEliminatoria('${fase}', '${p.idDoc}', 'L', this)">
-          <img src="https://flagcdn.com/16x12/${flagLocal}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">
-          <span class="pick-nombre">Gana ${p.local}</span>
+          ${imgLocalBtn}
+          <span class="pick-nombre">Gana ${nombreLocal || slotLocal}</span>
           <span class="pick-nombre-corto">L</span>
         </button>
 
         <button
           class="btn-pick visita ${pickGuardado === 'V' ? 'seleccionado visita activo' : ''}"
-          ${cerrado ? 'disabled' : ''}
+          ${(cerrado || !nombreVisita) ? 'disabled' : ''}
           onclick="pickEliminatoria('${fase}', '${p.idDoc}', 'V', this)">
-          <img src="https://flagcdn.com/16x12/${flagVisita}.png" style="width:16px;height:12px;border-radius:1px;flex-shrink:0">
-          <span class="pick-nombre">Gana ${p.visita}</span>
+          ${imgVisitaBtn}
+          <span class="pick-nombre">Gana ${nombreVisita || slotVisita}</span>
           <span class="pick-nombre-corto">V</span>
         </button>
       </div>
@@ -3040,9 +3054,14 @@ window.seleccionAutomaticaEliminatoria = function(fase) {
 window.guardarPicksEliminatoria = async function(fase) {
   const cards = Array.from(document.querySelectorAll(`#elim-body-${fase} .elim-pick-card`));
 
-  const pendientes = cards.filter(card =>
-    !card.querySelector('.elim-pick-options button.activo')
-  );
+  // Solo contar como pendiente si el partido tiene ambos equipos definidos
+  // (botones no deshabilitados) pero no tiene pick seleccionado
+  const pendientes = cards.filter(card => {
+    const btns = Array.from(card.querySelectorAll('.elim-pick-options button'));
+    const tieneEquipos = btns.some(b => !b.disabled && !b.querySelector('.pick-nombre')?.textContent.includes('Por definir'));
+    const tienePickSeleccionado = card.querySelector('.elim-pick-options button.activo');
+    return tieneEquipos && !tienePickSeleccionado;
+  });
 
   if (pendientes.length > 0) {
     showToast(`⚠️ Te faltan ${pendientes.length} partidos por seleccionar.`, 'warning');
@@ -3056,6 +3075,9 @@ window.guardarPicksEliminatoria = async function(fase) {
     for (const card of cards) {
       const partidoId = card.dataset.partidoId;
       const btnActivo = card.querySelector('.elim-pick-options button.activo');
+
+      // Saltar partidos sin pick (aún sin equipos definidos)
+      if (!btnActivo) continue;
 
       const botones = Array.from(card.querySelectorAll('.elim-pick-options button'));
       const pick = botones.indexOf(btnActivo) === 0 ? 'L' : 'V';

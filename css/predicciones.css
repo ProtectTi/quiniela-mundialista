@@ -3561,3 +3561,15 @@ table tbody tr:hover {
     min-width: 150px;
   }
 }
+
+/* Ícono neutral para slots sin equipo definido */
+.slot-icon-neutral {
+  font-size: 1.1rem;
+  opacity: .5;
+  flex-shrink: 0;
+}
+.slot-icon-btn {
+  font-size: .85rem;
+  opacity: .5;
+  flex-shrink: 0;
+}

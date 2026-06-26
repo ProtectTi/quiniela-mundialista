@@ -10,6 +10,7 @@ import {
   query,
   where,
   onSnapshot,
+  updateDoc,
 } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
 import {
@@ -1945,11 +1946,11 @@ function renderPartidoOctavosPreview(p) {
         </div>
 
         <div class="dieciseisavos-teams">
-          ${renderSlotOctavosPreview(p.local, p.equipoLocal)}
+          ${renderSlotOctavosPreview(p.local, p.equipoLocal, p.numero, 'local')}
 
           <div class="dieciseisavos-vs">VS</div>
 
-          ${renderSlotOctavosPreview(p.visita, p.equipoVisita)}
+          ${renderSlotOctavosPreview(p.visita, p.equipoVisita, p.numero, 'visita')}
         </div>
 
         <div class="dieciseisavos-info">
@@ -1962,7 +1963,8 @@ function renderPartidoOctavosPreview(p) {
   `;
 }
 
-function renderSlotOctavosPreview(slot, equipo) {
+function renderSlotOctavosPreview(slot, equipo, partidoId, lado) {
+  const btnOct = partidoId ? `<button class="btn-slot-confirmar" onclick="window.confirmarSlotFase('octavos',${partidoId},'${lado}','${slot}',this)">⚡ Confirmar</button>` : '';
   if (!equipo) {
     return `
       <div class="dieciseisavos-team pendiente">
@@ -1974,6 +1976,7 @@ function renderSlotOctavosPreview(slot, equipo) {
         </div>
 
         <small>Se define en dieciseisavos</small>
+        ${btnOct}
       </div>
     `;
   }
@@ -1990,6 +1993,7 @@ function renderSlotOctavosPreview(slot, equipo) {
       </div>
 
       <small>Ganador ${slot.replace('W', 'P.')}</small>
+      ${btnOct}
     </div>
   `;
 }
@@ -2097,11 +2101,11 @@ function renderPreviewCuartos(eliminatorias = []) {
               </div>
 
               <div class="dieciseisavos-teams">
-                ${renderSlotCuartosPreview(p.local, p.equipoLocal)}
+                ${renderSlotCuartosPreview(p.local, p.equipoLocal, p.numero, 'local')}
 
                 <div class="dieciseisavos-vs">VS</div>
 
-                ${renderSlotCuartosPreview(p.visita, p.equipoVisita)}
+                ${renderSlotCuartosPreview(p.visita, p.equipoVisita, p.numero, 'visita')}
               </div>
 
               <div class="dieciseisavos-info">
@@ -2120,7 +2124,8 @@ function renderPreviewCuartos(eliminatorias = []) {
   `;
 }
 
-function renderSlotCuartosPreview(slot, equipo) {
+function renderSlotCuartosPreview(slot, equipo, partidoId, lado) {
+  const btnCua = partidoId ? `<button class="btn-slot-confirmar" onclick="window.confirmarSlotFase('cuartos',${partidoId},'${lado}','${slot}',this)">⚡ Confirmar</button>` : '';
   if (!equipo) {
     return `
       <div class="dieciseisavos-team pendiente">
@@ -2132,6 +2137,7 @@ function renderSlotCuartosPreview(slot, equipo) {
         </div>
 
         <small>Se define en octavos</small>
+        ${btnCua}
       </div>
     `;
   }
@@ -2148,6 +2154,7 @@ function renderSlotCuartosPreview(slot, equipo) {
       </div>
 
       <small>Ganador ${slot.replace('W', 'P.')}</small>
+      ${btnCua}
     </div>
   `;
 }
@@ -2225,11 +2232,11 @@ function renderPreviewSemifinales(eliminatorias = []) {
               </div>
 
               <div class="dieciseisavos-teams">
-                ${renderSlotSemifinalPreview(p.local, p.equipoLocal)}
+                ${renderSlotSemifinalPreview(p.local, p.equipoLocal, p.numero, 'local')}
 
                 <div class="dieciseisavos-vs">VS</div>
 
-                ${renderSlotSemifinalPreview(p.visita, p.equipoVisita)}
+                ${renderSlotSemifinalPreview(p.visita, p.equipoVisita, p.numero, 'visita')}
               </div>
 
               <div class="dieciseisavos-info">
@@ -2245,7 +2252,8 @@ function renderPreviewSemifinales(eliminatorias = []) {
   `;
 }
 
-function renderSlotSemifinalPreview(slot, equipo) {
+function renderSlotSemifinalPreview(slot, equipo, partidoId, lado) {
+  const btnSem = partidoId ? `<button class="btn-slot-confirmar" onclick="window.confirmarSlotFase('semifinal',${partidoId},'${lado}','${slot}',this)">⚡ Confirmar</button>` : '';
   if (!equipo) {
     return `
       <div class="dieciseisavos-team pendiente">
@@ -2255,6 +2263,7 @@ function renderSlotSemifinalPreview(slot, equipo) {
           <strong>Ganador ${slot.replace('W', 'P.')}</strong>
         </div>
         <small>Se define en cuartos</small>
+        ${btnSem}
       </div>
     `;
   }
@@ -2269,6 +2278,7 @@ function renderSlotSemifinalPreview(slot, equipo) {
         <strong>${equipo}</strong>
       </div>
       <small>Ganador ${slot.replace('W', 'P.')}</small>
+      ${btnSem}
     </div>
   `;
 }
@@ -2357,11 +2367,11 @@ function renderPreviewPartidoUnico(p) {
             </div>
 
             <div class="dieciseisavos-teams">
-              ${renderSlotFinalPreview(p.slotLocal, p.local)}
+              ${renderSlotFinalPreview(p.slotLocal, p.local, p.numero, 'local')}
 
               <div class="dieciseisavos-vs">VS</div>
 
-              ${renderSlotFinalPreview(p.slotVisita, p.visita)}
+              ${renderSlotFinalPreview(p.slotVisita, p.visita, p.numero, 'visita')}
             </div>
 
             <div class="dieciseisavos-info">
@@ -2376,7 +2386,9 @@ function renderPreviewPartidoUnico(p) {
   `;
 }
 
-function renderSlotFinalPreview(slot, equipo) {
+function renderSlotFinalPreview(slot, equipo, partidoId, lado) {
+  const fase = slot && slot.startsWith('RU') ? 'tercer' : 'final';
+  const btnFin = partidoId ? `<button class="btn-slot-confirmar" onclick="window.confirmarSlotFase('${fase}',${partidoId},'${lado}','${slot}',this)">⚡ Confirmar</button>` : '';
   if (!equipo) {
     return `
       <div class="dieciseisavos-team pendiente">
@@ -2386,6 +2398,7 @@ function renderSlotFinalPreview(slot, equipo) {
           <strong>${slot.startsWith('RU') ? 'Perdedor' : 'Ganador'} ${slot.replace('RU', 'P.').replace('W', 'P.')}</strong>
         </div>
         <small>Se define en semifinales</small>
+        ${btnFin}
       </div>
     `;
   }
@@ -2400,6 +2413,7 @@ function renderSlotFinalPreview(slot, equipo) {
         <strong>${equipo}</strong>
       </div>
       <small>Desde semifinales</small>
+      ${btnFin}
     </div>
   `;
 }
@@ -3457,23 +3471,23 @@ window.confirmarSlotDieciseisavos = async function(partidoId, lado, slot, btnEl)
     btnEl.disabled = true;
     btnEl.textContent = 'Guardando...';
 
-    const ref = doc(db, 'eliminatorias', `dieciseisavos-${partidoId}`);
+    // Asegurar que partidoId sea número para el find
+    const idNum = Number(partidoId);
+    const ref = doc(db, 'eliminatorias', `dieciseisavos-${idNum}`);
     const snap = await getDoc(ref);
 
     const campo = lado === 'local' ? 'local' : 'visita';
-    const slotCampo = lado === 'local' ? 'slotLocal' : 'slotVisita';
-
     const partidosBase = getDieciseisavosOficiales();
-    const base = partidosBase.find(p => p.id === partidoId);
+    const base = partidosBase.find(p => Number(p.id) === idNum);
 
     if (snap.exists()) {
       // Partido ya existe, solo actualizar el equipo
       await updateDoc(ref, { [campo]: equipo.trim() });
     } else {
-      // Crear el partido con los datos base y el equipo confirmado
+      // Crear el partido completo con datos base
       await setDoc(ref, {
         fase: 'dieciseisavos',
-        numero: partidoId,
+        numero: idNum,
         local: lado === 'local' ? equipo.trim() : null,
         visita: lado === 'visita' ? equipo.trim() : null,
         slotLocal: base?.local || slot,
@@ -3489,12 +3503,12 @@ window.confirmarSlotDieciseisavos = async function(partidoId, lado, slot, btnEl)
       });
     }
 
-    alert(`✅ "${equipo.trim()}" confirmado en el partido ${partidoId}.`);
-    cargarGrupos(); // refrescar la vista
+    alert(`✅ "${equipo.trim()}" confirmado en el partido ${idNum}.`);
+    cargarGrupos();
 
   } catch(e) {
-    console.error(e);
-    alert('❌ Error al confirmar el equipo.');
+    console.error('Error confirmarSlot:', e);
+    alert(`❌ Error al confirmar el equipo: ${e.message}`);
     btnEl.disabled = false;
     btnEl.textContent = '⚡ Confirmar';
   }
