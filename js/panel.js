@@ -3460,6 +3460,63 @@ window.addEventListener('load', async () => {
 // ══════════════════════════════
 // GENERAR DIECISEISAVOS
 // ══════════════════════════════
+window.confirmarSlotFase = async function(fase, partidoId, lado, slot, btnEl) {
+  const nombre = prompt('Equipo para ' + slot + ' (Partido ' + partidoId + ' - ' + fase + '):\nEscribe el nombre exacto:');
+  if (!nombre || !nombre.trim()) return;
+  if (!confirm('Confirmar: "' + nombre.trim() + '" en ' + fase + ' P' + partidoId + '?')) return;
+  try {
+    btnEl.disabled = true;
+    btnEl.textContent = 'Guardando...';
+    const idNum = Number(partidoId);
+    const ref = doc(db, 'eliminatorias', fase + '-' + idNum);
+    const snap = await getDoc(ref);
+    const campo = lado === 'local' ? 'local' : 'visita';
+
+    if (snap.exists()) {
+      await updateDoc(ref, { [campo]: nombre.trim() });
+    } else {
+      // Buscar datos oficiales (fecha, hora, estadio, ciudad, slots) según la fase
+      const fasesFns = {
+        octavos:   () => (getOctavosOficialesPreview()  || []).find(p => Number(p.numero) === idNum),
+        cuartos:   () => (getCuartosPreview()            || []).find(p => Number(p.numero) === idNum),
+        semifinal: () => (getSemifinalesPreview()        || []).find(p => Number(p.numero) === idNum),
+      };
+      const base = fasesFns[fase] ? fasesFns[fase]() : null;
+
+      // Para tercer y final los datos son fijos
+      const datosFijos = {
+        tercer:   { fecha: '18 Jul 2026', hora: '15:00', estadio: 'Hard Rock Stadium, Miami Gardens, Florida, EUA', ciudad: 'Miami',                    slotLocal: 'RU101', slotVisita: 'RU102' },
+        final:    { fecha: '19 Jul 2026', hora: '13:00', estadio: 'MetLife Stadium, East Rutherford, New Jersey, EUA', ciudad: 'Nueva York/Nueva Jersey', slotLocal: 'W101',  slotVisita: 'W102'  },
+      };
+      const fijo = datosFijos[fase] || null;
+
+      await setDoc(ref, {
+        fase: fase,
+        numero: idNum,
+        local:    lado === 'local'  ? nombre.trim() : null,
+        visita:   lado === 'visita' ? nombre.trim() : null,
+        slotLocal:  base?.slotLocal  || fijo?.slotLocal  || (lado === 'local'  ? slot : null),
+        slotVisita: base?.slotVisita || fijo?.slotVisita || (lado === 'visita' ? slot : null),
+        fecha:    base?.fecha    || fijo?.fecha    || null,
+        hora:     base?.hora     || fijo?.hora     || null,
+        estadio:  base?.estadio  || fijo?.estadio  || null,
+        ciudad:   base?.ciudad   || fijo?.ciudad   || null,
+        marcadorLocal: null,
+        marcadorVisita: null,
+        ganador: null,
+        creadoEn: serverTimestamp()
+      });
+    }
+    alert('OK: "' + nombre.trim() + '" guardado correctamente.');
+    cargarGrupos();
+  } catch(e) {
+    console.error('confirmarSlotFase error:', e);
+    alert('Error: ' + e.message);
+    btnEl.disabled = false;
+    btnEl.textContent = '⚡ Confirmar';
+  }
+};
+
 window.confirmarSlotDieciseisavos = async function(partidoId, lado, slot, btnEl) {
   const equipo = prompt(`¿Qué equipo va en el slot ${slot} (Partido ${partidoId})?\nEscribe el nombre exacto del equipo:`);
   if (!equipo || !equipo.trim()) return;
